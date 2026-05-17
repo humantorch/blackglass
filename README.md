@@ -183,6 +183,8 @@ The symlink folder name should match the plugin ID (`blackglass`) so Obsidian ca
 
 **"Python 3 not found"**: install Python 3 from [python.org](https://www.python.org/downloads/) or via Homebrew (`brew install python3`). Python 3 ships with macOS 12.3+; if you're on an older version this may be missing.
 
+**"Failed to start Claude" / "spawn claude ENOENT" on Windows**: The Claude Code installer on Windows places `claude.exe` in `C:\Users\<you>\.local\bin`, which is not added to PATH automatically. Rather than fixing PATH (which requires a restart and may not help Obsidian anyway), set the full path directly: Settings → Blackglass → "Claude binary path" → `C:\Users\<you>\.local\bin\claude.exe`. The quick ask modal will work immediately after saving.
+
 **"Session ended with exit code 1" immediately**: Claude is either not on PATH or not found. Obsidian's Electron process does not inherit your full shell PATH. The plugin attempts to supplement PATH with common install locations (`~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`, etc.), but if Claude is installed elsewhere the most reliable fix is to set the full path explicitly in Settings → Blackglass → "Claude binary path" (use `which claude` in your terminal to find it).
 
 **"No previous session found, starting fresh"**: expected on first launch or in a new working directory. The plugin retries automatically without `--continue` and this message can be ignored.
