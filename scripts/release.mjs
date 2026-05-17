@@ -11,7 +11,8 @@
  *   4. Generates release notes using claude --print
  *   5. Creates and pushes a X.X.X git tag
  *   6. Creates a GitHub release with main.js, manifest.json, styles.css attached
- *   7. Cleans up local temp files
+ *   7. Bumps the version badge on the gh-pages website
+ *   8. Cleans up local temp files
  */
 
 import { execSync, spawnSync } from "child_process";
@@ -131,6 +132,28 @@ const url = execSync(
 	`gh release create ${tag} main.js manifest.json styles.css --title "${tag}" ${notesArg}`,
 	{ cwd: root }
 ).toString().trim();
+
+// Bump version badge on gh-pages website
+console.log("\nUpdating gh-pages version badge...");
+const worktreePath = resolve(tmpdir(), `blackglass-gh-pages-${version}`);
+try {
+	execSync(`git worktree add ${worktreePath} gh-pages`, { cwd: root });
+	const indexPath = resolve(worktreePath, "index.html");
+	const indexContent = readFileSync(indexPath, "utf8");
+	const updated = indexContent.replace(
+		/Obsidian Plugin · v[\d.]+/,
+		`Obsidian Plugin · v${version}`
+	);
+	writeFileSync(indexPath, updated);
+	execSync("git add index.html", { cwd: worktreePath });
+	execSync(`git commit -m "Bump version badge to v${version}"`, { cwd: worktreePath });
+	execSync("git push origin gh-pages", { cwd: worktreePath, stdio: "inherit" });
+	console.log("gh-pages updated.");
+} catch (err) {
+	console.warn(`Could not update gh-pages (${err.message}). Update the version badge manually.`);
+} finally {
+	execSync(`git worktree remove --force ${worktreePath}`, { cwd: root, stdio: "ignore" });
+}
 
 // Clean up local temp files
 if (existsSync(notesFile)) unlinkSync(notesFile);
