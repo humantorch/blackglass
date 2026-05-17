@@ -76,22 +76,13 @@ writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
 writeFileSync(packagePath, JSON.stringify(pkg, null, 2) + "\n");
 writeFileSync(versionsPath, JSON.stringify(versions, null, 2) + "\n");
 
-// Update static release badge in README
-const readmePath = resolve(root, "README.md");
-const readme = readFileSync(readmePath, "utf8");
-const updatedReadme = readme.replace(
-	/!\[GitHub release\]\(https:\/\/img\.shields\.io\/badge\/release-v[\d.]+-blue\)/,
-	`![GitHub release](https://img.shields.io/badge/release-v${version}-blue)`
-);
-writeFileSync(readmePath, updatedReadme);
-
 // Build first — if it fails, nothing is committed or tagged
 console.log("Building...");
 execSync("npm run build", { cwd: root, stdio: "inherit" });
 
 // Commit version bump
 console.log("\nCommitting version bump...");
-execSync("git add manifest.json package.json README.md versions.json", { cwd: root });
+execSync("git add manifest.json package.json versions.json", { cwd: root });
 execSync(`git commit -m "Bump version to ${version}"`, { cwd: root, stdio: "inherit" });
 execSync("git push origin main", { cwd: root, stdio: "inherit" });
 
