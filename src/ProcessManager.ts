@@ -10,6 +10,24 @@ import { PtySessionOptions, PrintModeOptions, PrintModeResult } from "./types";
  * Falls back gracefully if execSync is unavailable in the renderer.
  */
 function buildEnv(): Record<string, string> {
+	if (process.platform === "win32") {
+		const env: Record<string, string> = { ...(process.env as Record<string, string>) };
+		const userProfile = env.USERPROFILE || "C:\\Users\\Default";
+		const appData = env.APPDATA || "";
+		const localAppData = env.LOCALAPPDATA || "";
+		const pathParts = new Set<string>(
+			(env.PATH || "").split(";").filter(Boolean)
+		);
+		[
+			`${userProfile}\\.local\\bin`,
+			`${appData}\\npm`,
+			`${localAppData}\\Microsoft\\WinGet\\Packages`,
+			"C:\\Program Files\\nodejs",
+		].filter(Boolean).forEach((p) => pathParts.add(p));
+		env.PATH = Array.from(pathParts).join(";");
+		return env;
+	}
+
 	const env: Record<string, string> = {
 		...(process.env as Record<string, string>),
 	};
@@ -64,9 +82,7 @@ export class ProcessManager {
 
 	startPtySession(options: PtySessionOptions): ChildProcess {
 		if (process.platform === "win32") {
-			throw new Error(
-				"Interactive terminal is not yet supported on Windows. Use the Quick Ask modal instead."
-			);
+			return this.startWindowsSession(options);
 		}
 
 		const python = this.resolvePython();
@@ -87,6 +103,21 @@ export class ProcessManager {
 		proc.once("spawn", () => this.resizePty(proc, options.cols, options.rows));
 
 		return proc;
+	}
+
+	private startWindowsSession(options: PtySessionOptions): ChildProcess {
+		const args = [options.claudePath];
+		if (options.resumeLastSession) args.push("--continue");
+		if (options.skipPermissions) args.push("--dangerously-skip-permissions");
+
+		// conhost.exe --headless creates a ConPTY session and relays VT sequences on
+		// stdout — giving Claude Code proper terminal semantics without native modules.
+		// No FD3 resize channel; resizePty() already no-ops when stdio[3] is undefined.
+		return spawn("conhost.exe", ["--headless", "--", ...args], {
+			cwd: options.workingDirectory || this.resolvedEnv["USERPROFILE"] || "C:\\",
+			env: { ...this.resolvedEnv, TERM: "xterm-256color" },
+			stdio: ["pipe", "pipe", "pipe"],
+		});
 	}
 
 	resizePty(proc: ChildProcess, cols: number, rows: number): void {

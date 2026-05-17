@@ -3,7 +3,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/humantorch/blackglass)](https://github.com/humantorch/blackglass/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-1.6%2B-7c3aed)](https://obsidian.md)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey)](https://github.com/humantorch/blackglass#requirements)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)](https://github.com/humantorch/blackglass#requirements)
 [![Python 3](https://img.shields.io/badge/python-3.6%2B-blue)](https://www.python.org/downloads/)
 
 Blackglass puts [Claude Code](https://claude.ai/code) inside Obsidian: not a reimplementation, not a wrapper, but the actual CLI running in a real terminal alongside your notes. Every slash command, every MCP tool, every session you'd have in a standalone terminal is available here. If you already use Claude Code, there's nothing new to learn.
@@ -29,9 +29,9 @@ The vault MCP server is what makes it vault-native: a built-in server gives Clau
 
 - Obsidian desktop app (1.6.0+)
 - [Claude Code CLI](https://claude.ai/code) installed and on your PATH (`claude --version` should work in your terminal)
-- Python 3 (used by the terminal bridge; ships with macOS, available via your package manager on Linux)
+- Python 3 — macOS and Linux only (used by the terminal bridge; ships with macOS, available via your package manager on Linux)
 
-**Platform support:** The interactive terminal requires macOS or Linux. The Quick Ask modal works on all platforms including Windows. Full Windows terminal support is planned for a future release.
+**Platform support:** macOS, Linux, and Windows 10+ are all supported. On Windows, the terminal uses ConPTY via `conhost.exe` — panel resize is not supported (the terminal works but won't reflow when you drag the panel wider or narrower). The Quick Ask modal works on all platforms.
 
 ## Installation
 
@@ -183,7 +183,9 @@ The symlink folder name should match the plugin ID (`blackglass`) so Obsidian ca
 
 **"Python 3 not found"**: install Python 3 from [python.org](https://www.python.org/downloads/) or via Homebrew (`brew install python3`). Python 3 ships with macOS 12.3+; if you're on an older version this may be missing.
 
-**"Failed to start Claude" / "spawn claude ENOENT" on Windows**: The Claude Code installer on Windows places `claude.exe` in `C:\Users\<you>\.local\bin`, which is not added to PATH automatically. Rather than fixing PATH (which requires a restart and may not help Obsidian anyway), set the full path directly: Settings → Blackglass → "Claude binary path" → `C:\Users\<you>\.local\bin\claude.exe`. The quick ask modal will work immediately after saving.
+**Windows: terminal panel is blank or shows an error**: The Windows terminal requires Windows 10+ (for ConPTY via `conhost.exe`). If you're on Windows 10+ and seeing an error, the most likely cause is that `claude.exe` isn't on PATH. The Claude Code installer places it in `C:\Users\<you>\.local\bin`, which is not added to PATH automatically. Set the full path directly: Settings → Blackglass → "Claude binary path" → `C:\Users\<you>\.local\bin\claude.exe`.
+
+**Windows: terminal doesn't reflow when resizing the panel**: This is a known limitation. ConPTY resize requires Win32 API calls that aren't available from Obsidian's plugin environment. The terminal works; it just won't reflow when you drag the panel wider or narrower. The Quick Ask modal is unaffected.
 
 **"Session ended with exit code 1" immediately**: Claude is either not on PATH or not found. Obsidian's Electron process does not inherit your full shell PATH. The plugin attempts to supplement PATH with common install locations (`~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`, etc.), but if Claude is installed elsewhere the most reliable fix is to set the full path explicitly in Settings → Blackglass → "Claude binary path" (use `which claude` in your terminal to find it).
 
