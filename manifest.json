@@ -1,0 +1,10 @@
+{
+  "id": "blackglass",
+  "name": "Blackglass",
+  "version": "0.6.1",
+  "minAppVersion": "1.6.0",
+  "description": "Embed Claude Code inside Obsidian: interactive terminal, quick-ask modal, and a built-in vault MCP server.",
+  "author": "Scott Kosman",
+  "authorUrl": "",
+  "isDesktopOnly": true
+}

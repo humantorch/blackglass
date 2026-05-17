@@ -1,0 +1,33 @@
+{
+  "name": "obsidian-claude-code",
+  "version": "0.6.1",
+  "description": "Claude Code plugin for Obsidian",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc --noEmit -p tsconfig.json && node esbuild.config.mjs production",
+    "rebuild-native": "npx @electron/rebuild -f -w node-pty",
+    "release:patch": "node scripts/release.mjs patch",
+    "release:minor": "node scripts/release.mjs minor",
+    "release:major": "node scripts/release.mjs major"
+  },
+  "keywords": [],
+  "author": "Scott Kosman",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "builtin-modules": "^3.3.0",
+    "@electron/rebuild": "^4.0.0",
+    "electron": "^39.0.0",
+    "esbuild": "^0.25.0",
+    "obsidian": "latest",
+    "tslib": "2.6.2",
+    "typescript": "5.4.5"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-web-links": "^0.10.0",
+    "@xterm/xterm": "^5.4.0",
+    "node-pty": "^1.0.0"
+  }
+}

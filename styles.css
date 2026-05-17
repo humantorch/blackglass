@@ -1,0 +1,285 @@
+/* ============================================================
+   Claude Code Plugin — Styles
+   ============================================================ */
+
+/* ---- Terminal container ---- */
+
+.claude-code-terminal-container {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	background-color: var(--background-primary);
+}
+
+/* ---- Toolbar ---- */
+
+.claude-code-toolbar {
+	display: flex;
+	gap: 4px;
+	padding: 4px 8px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	flex-shrink: 0;
+	align-items: center;
+}
+
+.claude-code-toolbar-btn {
+	background: var(--interactive-normal);
+	color: var(--text-muted);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	padding: 2px 8px;
+	font-size: 0.8em;
+	cursor: pointer;
+	line-height: 1.6;
+	transition: background 0.1s, color 0.1s;
+}
+
+.claude-code-toolbar-btn:hover {
+	background: var(--interactive-hover);
+	color: var(--text-normal);
+}
+
+/* ---- xterm wrapper ---- */
+
+.claude-code-xterm-wrapper {
+	flex: 1;
+	overflow: hidden;
+	padding: 4px;
+	min-height: 0;
+}
+
+/* ---- xterm base styles ---- */
+
+.xterm {
+	cursor: text;
+	position: relative;
+	user-select: none;
+	-ms-user-select: none;
+	-webkit-user-select: none;
+	height: 100%;
+}
+
+.xterm.focus,
+.xterm:focus {
+	outline: none;
+}
+
+.xterm .xterm-helpers {
+	position: absolute;
+	top: 0;
+	z-index: 5;
+}
+
+.xterm .xterm-helper-textarea {
+	padding: 0;
+	border: 0;
+	margin: 0;
+	position: absolute;
+	opacity: 0;
+	left: -9999em;
+	top: 0;
+	width: 0;
+	height: 0;
+	z-index: -5;
+	white-space: nowrap;
+	overflow: hidden;
+	resize: none;
+}
+
+.xterm .xterm-viewport {
+	overflow-y: scroll;
+	cursor: default;
+	position: absolute;
+	right: 0;
+	left: 0;
+	top: 0;
+	bottom: 0;
+}
+
+.xterm .xterm-screen {
+	position: relative;
+}
+
+.xterm .xterm-screen canvas {
+	position: absolute;
+	left: 0;
+	top: 0;
+}
+
+.xterm .xterm-scroll-area {
+	visibility: hidden;
+}
+
+.xterm-char-measure-element {
+	display: inline-block;
+	visibility: hidden;
+	position: absolute;
+	top: 0;
+	left: -9999em;
+	line-height: normal;
+}
+
+.xterm.enable-mouse-events {
+	cursor: default;
+}
+
+.xterm.xterm-cursor-pointer,
+.xterm .xterm-cursor-pointer {
+	cursor: pointer;
+}
+
+.xterm-accessibility:not(.debug),
+.xterm-message {
+	position: absolute;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	right: 0;
+	z-index: 10;
+	color: transparent;
+	pointer-events: none;
+}
+
+.xterm-dim {
+	opacity: 0.5;
+}
+
+.xterm-underline-1 { text-decoration: underline; }
+.xterm-underline-2 { text-decoration: double underline; }
+.xterm-underline-3 { text-decoration: wavy underline; }
+.xterm-underline-4 { text-decoration: dotted underline; }
+.xterm-underline-5 { text-decoration: dashed underline; }
+.xterm-strikethrough { text-decoration: line-through; }
+
+/* ============================================================
+   Quick Modal
+   ============================================================ */
+
+.claude-quick-modal .modal-content {
+	padding: 16px;
+}
+
+.claude-quick-modal-context {
+	margin-bottom: 12px;
+}
+
+.claude-quick-modal-context-label {
+	font-size: 0.8em;
+	color: var(--text-muted);
+	margin: 0 0 4px 0;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.claude-quick-modal-context-preview {
+	font-size: 0.85em;
+	color: var(--text-muted);
+	border-left: 2px solid var(--interactive-accent);
+	padding-left: 8px;
+	margin: 0;
+	white-space: pre-wrap;
+	word-break: break-word;
+	max-height: 80px;
+	overflow-y: auto;
+}
+
+.claude-quick-modal-prompt-section {
+	margin-bottom: 12px;
+}
+
+.claude-quick-modal-textarea {
+	width: 100%;
+	min-height: 80px;
+	resize: vertical;
+	font-family: var(--font-text);
+	font-size: var(--font-ui-medium);
+	padding: 8px;
+	background: var(--background-primary);
+	color: var(--text-normal);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	box-sizing: border-box;
+}
+
+.claude-quick-modal-textarea:focus {
+	outline: none;
+	border-color: var(--interactive-accent);
+}
+
+.claude-quick-modal-actions {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	margin-bottom: 12px;
+}
+
+.claude-quick-modal-copy-btn {
+	background: var(--interactive-normal);
+	color: var(--text-muted);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	padding: 4px 12px;
+	cursor: pointer;
+}
+
+.claude-quick-modal-copy-btn:hover {
+	background: var(--interactive-hover);
+	color: var(--text-normal);
+}
+
+.claude-quick-modal-model-wrapper {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-left: auto;
+}
+
+.claude-quick-modal-model-label {
+	font-size: 12px;
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+
+.claude-quick-modal-model-select {
+	font-size: 12px;
+	padding: 2px 6px;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	color: var(--text-normal);
+	cursor: pointer;
+}
+
+.claude-quick-modal-result {
+	margin-top: 12px;
+	padding: 12px;
+	background: var(--background-secondary);
+	border-radius: 4px;
+	max-height: 400px;
+	overflow-y: auto;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.claude-quick-modal-error {
+	color: var(--text-error);
+	margin: 0;
+}
+
+.claude-quick-modal-response {
+	font-size: var(--font-ui-medium);
+}
+
+.claude-quick-modal-loading {
+	color: var(--text-muted);
+	font-style: italic;
+}
+
+/* ============================================================
+   Spinner animation
+   ============================================================ */
+
+@keyframes claude-spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
