@@ -26,7 +26,7 @@ An Obsidian plugin that embeds [Claude Code](https://claude.ai/code) directly in
 - [Claude Code CLI](https://claude.ai/code) installed and on your PATH (`claude --version` should work in your terminal)
 - Python 3 — used by the terminal bridge; ships with macOS, available via your package manager on Linux
 
-**Platform support:** The interactive terminal requires macOS or Linux. The Quick Ask modal works on all platforms including Windows.
+**Platform support:** The interactive terminal requires macOS or Linux. The Quick Ask modal works on all platforms including Windows. Full Windows terminal support is planned for a future release.
 
 ## Installation
 
@@ -162,7 +162,7 @@ The symlink folder name should match the plugin ID (`blackglass`) so Obsidian ca
 
 ### Troubleshooting
 
-**"Interactive terminal is not yet supported on Windows"** — the terminal requires macOS or Linux. Use the Quick Ask modal on Windows.
+**"Interactive terminal is not yet supported on Windows"** — the terminal requires macOS or Linux for now. Use the Quick Ask modal on Windows. Full Windows terminal support is planned for a future release.
 
 **"Python 3 not found"** — install Python 3 from [python.org](https://www.python.org/downloads/) or via Homebrew (`brew install python3`). Python 3 ships with macOS 12.3+; if you're on an older version this may be missing.
 
