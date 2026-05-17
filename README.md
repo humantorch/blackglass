@@ -5,30 +5,30 @@
 [![Obsidian](https://img.shields.io/badge/Obsidian-1.6%2B-7c3aed)](https://obsidian.md)
 [![Desktop only](https://img.shields.io/badge/platform-desktop-lightgrey)](https://obsidian.md/download)
 
-Blackglass puts [Claude Code](https://claude.ai/code) inside Obsidian — not a reimplementation, not a wrapper, but the actual CLI running in a real terminal alongside your notes. Every slash command, every MCP tool, every session you'd have in a standalone terminal is available here. If you already use Claude Code, there's nothing new to learn.
+Blackglass puts [Claude Code](https://claude.ai/code) inside Obsidian: not a reimplementation, not a wrapper, but the actual CLI running in a real terminal alongside your notes. Every slash command, every MCP tool, every session you'd have in a standalone terminal is available here. If you already use Claude Code, there's nothing new to learn.
 
-The vault MCP server is what makes it vault-native: a built-in server gives Claude structured, authenticated access to your notes — reading, searching, and writing — without any configuration on your part.
+The vault MCP server is what makes it vault-native: a built-in server gives Claude structured, authenticated access to your notes (reading, searching, and writing) without any configuration on your part.
 
-![Blackglass — Claude Code inside Obsidian](assets/screenshot.png)
+![Blackglass screenshot](assets/screenshot.png)
 
 ## Features
 
-- **Real Claude Code terminal** — not a chat UI or a wrapper; the actual Claude Code CLI running in a full xterm.js terminal in your sidebar. All slash commands, all MCP tools, full session continuity.
-- **Built-in vault MCP server** — gives Claude structured read/write access to your notes the moment the plugin loads; no configuration required
-- **Authenticated MCP server** — auto-generated Bearer token written to `.mcp.json` on every launch; any other local process is denied access
-- **Read-only vault mode** — optional setting to hide write tools from Claude entirely, limiting it to read and search only
-- **Quick ask modal** — one-shot queries using Claude Code's `--print` mode; no terminal required; renders responses as Markdown
-- **File explorer context menu** — right-click any `.md` file and choose "Ask Claude about this" to query Claude about it without opening it
-- **Vault-aware quick ask** — pre-fill the modal with the active note or selected text
-- **Per-query model selector** — choose the model directly in the quick ask modal; overrides the default without changing your setting
-- **Session resume** — picks up where you left off (`--continue`) on every open
-- **Desktop-only** — takes full advantage of Electron's native process support
+- **Real Claude Code terminal**: not a chat UI or a wrapper; the actual Claude Code CLI running in a full xterm.js terminal in your sidebar. All slash commands, all MCP tools, full session continuity.
+- **Built-in vault MCP server**: gives Claude structured read/write access to your notes the moment the plugin loads; no configuration required
+- **Authenticated MCP server**: auto-generated Bearer token written to `.mcp.json` on every launch; any other local process is denied access
+- **Read-only vault mode**: optional setting to hide write tools from Claude entirely, limiting it to read and search only
+- **Quick ask modal**: one-shot queries using Claude Code's `--print` mode; no terminal required; renders responses as Markdown
+- **File explorer context menu**: right-click any `.md` file and choose "Ask Claude about this" to query Claude about it without opening it
+- **Vault-aware quick ask**: pre-fill the modal with the active note or selected text
+- **Per-query model selector**: choose the model directly in the quick ask modal; overrides the default without changing your setting
+- **Session resume**: picks up where you left off (`--continue`) on every open
+- **Desktop-only**: takes full advantage of Electron's native process support
 
 ## Requirements
 
 - Obsidian desktop app (1.6.0+)
 - [Claude Code CLI](https://claude.ai/code) installed and on your PATH (`claude --version` should work in your terminal)
-- Python 3 — used by the terminal bridge; ships with macOS, available via your package manager on Linux
+- Python 3 (used by the terminal bridge; ships with macOS, available via your package manager on Linux)
 
 **Platform support:** The interactive terminal requires macOS or Linux. The Quick Ask modal works on all platforms including Windows. Full Windows terminal support is planned for a future release.
 
@@ -55,7 +55,7 @@ All commands are available via the command palette (Cmd+P):
 | Ask Claude about selection | Prefills the modal with the selected text |
 | Start new Claude Code session | Kills the current session and starts a clean fresh one |
 
-A ribbon icon (bot) also opens the terminal panel directly. The terminal toolbar has a **New session** button that does the same thing — it always starts completely fresh, regardless of the "Resume last session" setting.
+A ribbon icon (bot) also opens the terminal panel directly. The terminal toolbar has a **New session** button that does the same thing; it always starts completely fresh, regardless of the "Resume last session" setting.
 
 Right-clicking any `.md` file in the file explorer shows an **Ask Claude about this** option, which opens the quick ask modal prefilled with that note's content.
 
@@ -101,22 +101,22 @@ Claude Code gains the following vault tools:
 
 `search_note_content` accepts an optional `directory` argument to limit the search to a subtree, and an optional `max_results` argument (default 10, max 50). Each result includes up to 3 matching lines with surrounding context so Claude can decide which notes to read in full.
 
-To disable the MCP server, toggle it off in Settings - Blackglass - "Enable vault MCP server". To use a different port, change the "MCP server port" setting (valid range: 1024-65535). To prevent Claude from writing to your vault, enable "Read-only vault access" — this hides `create_note` and `update_note` from Claude entirely.
+To disable the MCP server, toggle it off in Settings - Blackglass - "Enable vault MCP server". To use a different port, change the "MCP server port" setting (valid range: 1024-65535). To prevent Claude from writing to your vault, enable "Read-only vault access"; this hides `create_note` and `update_note` from Claude entirely.
 
 **Note:** `.mcp.json` in the vault root is managed by Blackglass. If you already have a `.mcp.json` with other servers, Blackglass will merge its `mcpServers.obsidian` entry rather than overwriting the whole file.
 
 ## Security
 
-Blackglass gives Claude Code full shell access in the context of your vault's working directory. This means a note containing adversarial instructions (prompt injection) could — if read into Claude's context via `read_note`, `get_active_note`, or the quick ask commands — attempt to influence Claude's behaviour, including running shell commands.
+Blackglass gives Claude Code full shell access in the context of your vault's working directory. This means a note containing adversarial instructions (prompt injection) could (if read into Claude's context via `read_note`, `get_active_note`, or the quick ask commands) attempt to influence Claude's behaviour, including running shell commands.
 
-**What Blackglass does:** All note content passed to Claude is wrapped in XML-style delimiters with an explicit instruction to treat it as data rather than instructions. This defends against naive and moderately sophisticated injection attempts. It is not a complete solution — a carefully crafted note could attempt to escape the wrapper — but it meaningfully raises the bar.
+**What Blackglass does:** All note content passed to Claude is wrapped in XML-style delimiters with an explicit instruction to treat it as data rather than instructions. This defends against naive and moderately sophisticated injection attempts. It is not a complete solution; a carefully crafted note could attempt to escape the wrapper, but it meaningfully raises the bar.
 
-**What won't protect you:** The **Read-only vault access** setting removes the `create_note` and `update_note` MCP tools, but this is not a meaningful injection defence. A successful injection still has full shell access — it can exfiltrate data via `curl`, write files directly via the filesystem, or run any other shell command. Read-only mode is useful if you want to prevent accidental vault writes during a browsing or query session; it should not be mistaken for a security boundary.
+**What won't protect you:** The **Read-only vault access** setting removes the `create_note` and `update_note` MCP tools, but this is not a meaningful injection defence. A successful injection still has full shell access; it can exfiltrate data via `curl`, write files directly via the filesystem, or run any other shell command. Read-only mode is useful if you want to prevent accidental vault writes during a browsing or query session; it should not be mistaken for a security boundary.
 
 **Recommended practices:**
 
 - Be cautious running "Ask Claude about this" on notes from untrusted sources: web clips, shared vaults, downloaded templates
-- The terminal panel is interactive — you see Claude's responses before anything executes, which is a meaningful check on unexpected behaviour
+- The terminal panel is interactive; you see Claude's responses before anything executes, which is a meaningful check on unexpected behaviour
 
 ## Building from source
 
@@ -166,15 +166,15 @@ The symlink folder name should match the plugin ID (`blackglass`) so Obsidian ca
 
 ### Troubleshooting
 
-**"Interactive terminal is not yet supported on Windows"** — the terminal requires macOS or Linux for now. Use the Quick Ask modal on Windows. Full Windows terminal support is planned for a future release.
+**"Interactive terminal is not yet supported on Windows"**: the terminal requires macOS or Linux for now. Use the Quick Ask modal on Windows. Full Windows terminal support is planned for a future release.
 
-**"Python 3 not found"** — install Python 3 from [python.org](https://www.python.org/downloads/) or via Homebrew (`brew install python3`). Python 3 ships with macOS 12.3+; if you're on an older version this may be missing.
+**"Python 3 not found"**: install Python 3 from [python.org](https://www.python.org/downloads/) or via Homebrew (`brew install python3`). Python 3 ships with macOS 12.3+; if you're on an older version this may be missing.
 
-**"Session ended with exit code 1" immediately** — Claude is either not on PATH or not found. Obsidian's Electron process does not inherit your full shell PATH. The plugin attempts to supplement PATH with common install locations (`~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`, etc.), but if Claude is installed elsewhere the most reliable fix is to set the full path explicitly in Settings → Blackglass → "Claude binary path" (use `which claude` in your terminal to find it).
+**"Session ended with exit code 1" immediately**: Claude is either not on PATH or not found. Obsidian's Electron process does not inherit your full shell PATH. The plugin attempts to supplement PATH with common install locations (`~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`, etc.), but if Claude is installed elsewhere the most reliable fix is to set the full path explicitly in Settings → Blackglass → "Claude binary path" (use `which claude` in your terminal to find it).
 
-**"No previous session found — starting fresh"** — expected on first launch or in a new working directory. The plugin retries automatically without `--continue` and this message can be ignored.
+**"No previous session found, starting fresh"**: expected on first launch or in a new working directory. The plugin retries automatically without `--continue` and this message can be ignored.
 
-**MCP servers not available inside the plugin** — Electron's process environment does not inherit your full shell profile, so environment variables like `GITHUB_PERSONAL_ACCESS_TOKEN` are absent by default. The plugin works around this by capturing the full login shell environment at startup (via `zsh -l -c "env"`), which should make any MCP servers that rely on shell-profile variables work automatically. If an MCP tool is still missing, check that the relevant environment variable is exported in your shell profile (`.zshrc`, `.zprofile`, etc.) rather than set only in a terminal session.
+**MCP servers not available inside the plugin**: Electron's process environment does not inherit your full shell profile, so environment variables like `GITHUB_PERSONAL_ACCESS_TOKEN` are absent by default. The plugin works around this by capturing the full login shell environment at startup (via `zsh -l -c "env"`), which should make any MCP servers that rely on shell-profile variables work automatically. If an MCP tool is still missing, check that the relevant environment variable is exported in your shell profile (`.zshrc`, `.zprofile`, etc.) rather than set only in a terminal session.
 
 ## Architecture
 
