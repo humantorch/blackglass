@@ -106,6 +106,12 @@ To disable the MCP server, toggle it off in Settings - Blackglass - "Enable vaul
 
 **Note:** `.mcp.json` in the vault root is managed by Blackglass. If you already have a `.mcp.json` with other servers, Blackglass will merge its `mcpServers.obsidian` entry rather than overwriting the whole file.
 
+## Network usage
+
+Blackglass itself communicates only over localhost: the vault MCP server binds to `127.0.0.1` and is never exposed to the network.
+
+The Claude Code CLI that Blackglass runs is a separate process that sends your prompts and conversation history to [Anthropic's API](https://www.anthropic.com) over HTTPS. This is the same network activity that occurs when you use Claude Code in a terminal. Blackglass does not transmit any data to Anthropic directly; all API communication is handled by the Claude Code CLI using your own account and API credentials.
+
 ## Security
 
 Blackglass gives Claude Code full shell access in the context of your vault's working directory. This means a note containing adversarial instructions (prompt injection) could (if read into Claude's context via `read_note`, `get_active_note`, or the quick ask commands) attempt to influence Claude's behaviour, including running shell commands.

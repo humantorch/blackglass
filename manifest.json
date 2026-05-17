@@ -5,6 +5,6 @@
   "minAppVersion": "1.6.0",
   "description": "Embed Claude Code inside Obsidian: interactive terminal, quick-ask modal, and a built-in vault MCP server.",
   "author": "Scott Kosman",
-  "authorUrl": "",
+  "authorUrl": "https://github.com/humantorch",
   "isDesktopOnly": true
 }
