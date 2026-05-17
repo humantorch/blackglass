@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blackglass — Claude Code for Obsidian</title>
+  <meta name="description" content="Embed Claude Code directly inside Obsidian. Interactive terminal, vault-aware MCP server, and quick-ask modal — all without leaving your notes.">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161b22;
+      --border:   #30363d;
+      --text:     #e6edf3;
+      --muted:    #8b949e;
+      --accent:   #a78bfa;
+      --accent-2: #7c6aed;
+      --green:    #3fb950;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Nav ── */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: rgba(13, 17, 23, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+    }
+
+    .nav-logo {
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .nav-logo span { color: var(--accent); }
+
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+      list-style: none;
+    }
+
+    .nav-links a { color: var(--muted); font-size: 0.9rem; transition: color 0.15s; }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+    /* ── Hero ── */
+    .hero {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 6rem 2rem 4rem;
+      text-align: center;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-family: ui-monospace, "SFMono-Regular", monospace;
+      color: var(--accent);
+      background: rgba(167, 139, 250, 0.1);
+      border: 1px solid rgba(167, 139, 250, 0.25);
+      border-radius: 2rem;
+      padding: 0.25rem 0.75rem;
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.02em;
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.1;
+      margin-bottom: 1.25rem;
+      background: linear-gradient(135deg, var(--text) 60%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: 1.2rem;
+      color: var(--muted);
+      max-width: 560px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.7;
+    }
+
+    .hero-sub strong { color: var(--text); }
+
+    .cta-group {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.65rem 1.4rem;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      transition: opacity 0.15s, transform 0.1s;
+      cursor: pointer;
+    }
+
+    .btn:hover { opacity: 0.88; text-decoration: none; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+
+    .btn-primary {
+      background: var(--accent-2);
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    /* ── Screenshot ── */
+    .screenshot-section {
+      max-width: 1000px;
+      margin: 2rem auto 5rem;
+      padding: 0 2rem;
+    }
+
+    .window-chrome {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+    }
+
+    .window-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: #1c2128;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-red    { background: #ff5f57; }
+    .dot-yellow { background: #febc2e; }
+    .dot-green  { background: #28c840; }
+
+    .window-title {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-left: auto;
+      margin-right: auto;
+      font-family: ui-monospace, monospace;
+    }
+
+    /* Replace the .screenshot-placeholder with an <img> when you have a real screenshot */
+    .screenshot-placeholder {
+      padding: 3rem 2rem;
+      font-family: ui-monospace, "SFMono-Regular", monospace;
+      font-size: 0.85rem;
+      line-height: 1.7;
+      color: #cdd6f4;
+      background: #0d1117;
+    }
+
+    .screenshot-placeholder .ps { color: var(--green); }
+    .screenshot-placeholder .prompt { color: var(--muted); }
+    .screenshot-placeholder .claude { color: var(--accent); }
+    .screenshot-placeholder .tool { color: #89dceb; }
+    .screenshot-placeholder .cursor {
+      display: inline-block;
+      width: 8px; height: 1em;
+      background: var(--text);
+      vertical-align: text-bottom;
+      animation: blink 1.1s step-end infinite;
+    }
+
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* ── Features ── */
+    .features-section {
+      max-width: 1000px;
+      margin: 0 auto 6rem;
+      padding: 0 2rem;
+    }
+
+    .section-label {
+      text-align: center;
+      font-size: 0.8rem;
+      font-family: ui-monospace, monospace;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+
+    .section-title {
+      text-align: center;
+      font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 3rem;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .feature {
+      background: var(--bg);
+      padding: 1.75rem;
+      transition: background 0.15s;
+    }
+
+    .feature:hover { background: var(--surface); }
+
+    .feature-icon {
+      font-size: 1.4rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .feature h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+      letter-spacing: -0.01em;
+    }
+
+    .feature p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--text); }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      nav { padding: 1rem 1.25rem; }
+      .nav-links { gap: 1rem; }
+      .hero { padding: 4rem 1.25rem 3rem; }
+      .screenshot-section, .features-section { padding: 0 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo">Black<span>glass</span></span>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="https://github.com/humantorch/blackglass">GitHub</a></li>
+    <li><a href="https://github.com/humantorch/blackglass/releases/latest" class="btn btn-primary" style="padding:0.4rem 1rem;font-size:0.85rem;">Download</a></li>
+  </ul>
+</nav>
+
+<section class="hero">
+  <div class="badge">Obsidian Plugin · v1.0.0</div>
+  <h1>Claude Code,<br>inside your vault.</h1>
+  <p class="hero-sub">
+    Blackglass embeds <strong>Claude Code</strong> directly inside Obsidian —
+    full interactive terminal, vault-aware MCP server, and one-shot quick ask,
+    all without leaving your notes.
+  </p>
+  <div class="cta-group">
+    <a class="btn btn-primary" href="https://github.com/humantorch/blackglass/releases/latest">
+      Download v1.0.0
+    </a>
+    <a class="btn btn-secondary" href="https://github.com/humantorch/blackglass">
+      View on GitHub
+    </a>
+  </div>
+</section>
+
+<section class="screenshot-section">
+  <div class="window-chrome">
+    <div class="window-titlebar">
+      <div class="dot dot-red"></div>
+      <div class="dot dot-yellow"></div>
+      <div class="dot dot-green"></div>
+      <span class="window-title">Claude Code — obsidian-plugin-testing</span>
+    </div>
+    <!--
+      Replace the div below with:
+        <img src="screenshot.png" alt="Blackglass terminal in Obsidian" style="width:100%;display:block;">
+      once you have a real screenshot.
+    -->
+    <div class="screenshot-placeholder">
+      <span class="ps">✓</span> <span class="prompt">Accessing workspace: /Users/scott/Documents/obsidian-plugin-testing</span><br><br>
+      <span class="claude">Claude:</span> I can see your vault. You have 47 notes across 8 folders.<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;What would you like to work on?<br><br>
+      <span class="prompt">&gt;</span> summarize my weekly notes and create an action items list<br><br>
+      <span class="tool">⏺ read_note</span> <span class="prompt">("Weekly/2026-05-17.md")</span><br>
+      <span class="tool">⏺ search_vault</span> <span class="prompt">(query: "weekly")</span><br>
+      <span class="tool">⏺ create_note</span> <span class="prompt">("Action Items/2026-05-17.md")</span><br><br>
+      <span class="claude">Claude:</span> Done. I've created <span class="accent" style="color:var(--accent)">Action Items/2026-05-17.md</span> with<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;12 action items pulled from this week's notes.<br><br>
+      <span class="prompt">&gt;</span> <span class="cursor"></span>
+    </div>
+  </div>
+</section>
+
+<section class="features-section" id="features">
+  <p class="section-label">Features</p>
+  <h2 class="section-title">Everything Claude Code has,<br>where your notes live.</h2>
+  <div class="features-grid">
+    <div class="feature">
+      <div class="feature-icon">⌨️</div>
+      <h3>Interactive Terminal</h3>
+      <p>Full Claude Code session in Obsidian's sidebar. xterm.js rendering, session resume, and new session on demand.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🔌</div>
+      <h3>Vault MCP Server</h3>
+      <p>A built-in MCP server gives Claude structured access to your vault — read, search, create, and update notes via typed tools.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">⚡</div>
+      <h3>Quick Ask Modal</h3>
+      <p>One-shot queries without a terminal session. Responses render as Markdown. Choose your model per query.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">📄</div>
+      <h3>Context-Aware</h3>
+      <p>Ask Claude about your active note, selected text, or any file via the right-click context menu — no copy-paste required.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🔒</div>
+      <h3>Authenticated by Default</h3>
+      <p>The MCP server generates a fresh Bearer token on every launch. No other local process can access your vault through it.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">📦</div>
+      <h3>Zero Native Dependencies</h3>
+      <p>No compilation step, no node_modules in the release. Install from a 3-file zip — terminal works via a bundled Python PTY bridge.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>
+    Blackglass is open source under the
+    <a href="https://github.com/humantorch/blackglass/blob/main/LICENSE">MIT License</a>.
+    Built by <a href="https://github.com/humantorch">Scott Kosman</a>.
+  </p>
+</footer>
+
+</body>
+</html>
