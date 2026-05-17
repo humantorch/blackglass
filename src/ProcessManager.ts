@@ -75,11 +75,18 @@ export class ProcessManager {
 		if (options.resumeLastSession) args.push("--continue");
 		if (options.skipPermissions) args.push("--dangerously-skip-permissions");
 
-		return spawn(python, ["-c", pseudoterminalScript, ...args], {
+		const proc = spawn(python, ["-c", pseudoterminalScript, ...args], {
 			cwd: options.workingDirectory || this.resolvedEnv["HOME"] || "/",
 			env: { ...this.resolvedEnv, TERM: "xterm-color", COLORTERM: "truecolor" },
 			stdio: ["pipe", "pipe", "pipe", "pipe"],
 		});
+
+		// Send the actual terminal dimensions as soon as the process is alive.
+		// Without this the PTY starts at the kernel default (often 0×0 or 80×24),
+		// causing Claude Code's cursor-based UI to wrap incorrectly and overwrite text.
+		proc.once("spawn", () => this.resizePty(proc, options.cols, options.rows));
+
+		return proc;
 	}
 
 	resizePty(proc: ChildProcess, cols: number, rows: number): void {
