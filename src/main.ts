@@ -23,12 +23,8 @@ export default class ClaudeCodePlugin extends Plugin {
 	async onload(): Promise<void> {
 		await this.loadSettings();
 
-		// Derive the plugin's absolute directory from the manifest.
-		// this.manifest.dir is the vault-relative path (e.g. .obsidian/plugins/blackglass).
-		// We cannot use __dirname here — it resolves to Obsidian's internal ASAR in the renderer.
 		const vaultRoot = (this.app.vault.adapter as any).getBasePath() as string;
-		const pluginDir = path.join(vaultRoot, this.manifest.dir ?? "");
-		this.processManager = new ProcessManager(pluginDir);
+		this.processManager = new ProcessManager();
 
 		this.contextBuilder = new ContextBuilder(this.app);
 

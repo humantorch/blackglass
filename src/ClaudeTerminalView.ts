@@ -2,7 +2,7 @@ import { ItemView, WorkspaceLeaf } from "obsidian";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
-import type { IPty } from "node-pty";
+import type { ChildProcess } from "child_process";
 import type ClaudeCodePlugin from "./main";
 import { CLAUDE_ICON, CLAUDE_TERMINAL_VIEW_TYPE } from "./types";
 
@@ -61,7 +61,7 @@ export class ClaudeTerminalView extends ItemView {
 	private plugin: ClaudeCodePlugin;
 	private terminal: Terminal | null = null;
 	private fitAddon: FitAddon | null = null;
-	private pty: IPty | null = null;
+	private pty: ChildProcess | null = null;
 	private resizeObserver: ResizeObserver | null = null;
 	private terminalInputDisposable: { dispose(): void } | null = null;
 
@@ -165,7 +165,7 @@ export class ClaudeTerminalView extends ItemView {
 				`\r\n\x1b[31mFailed to start Claude Code: ${(err as Error).message}\x1b[0m`
 			);
 			this.terminal.writeln(
-				`\r\n\x1b[33mCheck that '${settings.claudeBinaryPath}' is on your PATH and run 'npm run rebuild-native' if node-pty failed to load.\x1b[0m`
+				`\r\n\x1b[33mCheck that '${settings.claudeBinaryPath}' is on your PATH and that Python 3 is installed.\x1b[0m`
 			);
 			return;
 		}
@@ -175,7 +175,8 @@ export class ClaudeTerminalView extends ItemView {
 		const thisPty = this.pty;
 
 		// PTY output -> terminal display
-		thisPty.onData((data: string) => {
+		const onData = (chunk: Buffer) => {
+			const data = chunk.toString("utf-8");
 			this.terminal?.write(data);
 			// Force repaint when a TUI (e.g. /mcp dialog) exits the alternate screen.
 			// Without this, xterm.js leaves rendering artifacts from the TUI overlay.
@@ -191,15 +192,19 @@ export class ClaudeTerminalView extends ItemView {
 					}
 				});
 			}
-		});
+		};
+		thisPty.stdout?.on("data", onData);
+		thisPty.stderr?.on("data", onData);
 
 		// PTY exit
-		thisPty.onExit(({ exitCode }: { exitCode: number }) => {
+		thisPty.on("close", (code: number | null) => {
 			// If this PTY has already been replaced (e.g. New Session was clicked),
 			// ignore the exit entirely — do not null out the newer session.
 			if (this.pty !== thisPty) return;
 
 			this.pty = null;
+
+			const exitCode = code ?? 1;
 
 			// If --continue caused an immediate exit (no previous session exists),
 			// retry without it rather than showing an error.
@@ -223,7 +228,7 @@ export class ClaudeTerminalView extends ItemView {
 		// stale handlers registered causes every keystroke to be written multiple times.
 		this.terminalInputDisposable?.dispose();
 		this.terminalInputDisposable = this.terminal.onData((data: string) => {
-			this.pty?.write(data);
+			if (this.pty) this.plugin.processManager.writePty(this.pty, data);
 		});
 	}
 

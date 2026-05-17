@@ -1,6 +1,6 @@
 import { execSync, spawn } from "child_process";
-import * as path from "path";
-import type { IPty } from "node-pty";
+import type { ChildProcess } from "child_process";
+import pseudoterminalScript from "./pseudoterminal.py";
 import { PtySessionOptions, PrintModeOptions, PrintModeResult } from "./types";
 
 /**
@@ -14,7 +14,6 @@ function buildEnv(): Record<string, string> {
 		...(process.env as Record<string, string>),
 	};
 
-	// Try to capture the full login shell environment
 	try {
 		const shell = process.env.SHELL || "/bin/zsh";
 		const output = execSync(`${shell} -l -c "env"`, {
@@ -32,7 +31,6 @@ function buildEnv(): Record<string, string> {
 		// execSync may fail in Electron renderer — PATH fallback below handles it
 	}
 
-	// Always supplement PATH with common install locations as a safety net
 	const home = env.HOME || "";
 	const pathParts = new Set<string>(
 		(env.PATH || "").split(":").filter(Boolean)
@@ -58,65 +56,76 @@ function buildEnv(): Record<string, string> {
 }
 
 export class ProcessManager {
-	/**
-	 * Absolute path to the plugin directory, used to locate node-pty.
-	 * __dirname resolves to Obsidian's internal ASAR in the renderer process,
-	 * so we derive the plugin dir from the manifest instead and pass it in.
-	 */
-	private pluginDir: string;
 	private resolvedEnv: Record<string, string>;
 
-	constructor(pluginDir: string) {
-		this.pluginDir = pluginDir;
+	constructor() {
 		this.resolvedEnv = buildEnv();
 	}
 
-	/**
-	 * Starts an interactive Claude Code session in a PTY.
-	 * node-pty is required at runtime (native module, not bundled).
-	 */
-	startPtySession(options: PtySessionOptions): IPty {
-		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		const pty = require(path.join(this.pluginDir, "node_modules", "node-pty"));
-
-		const args: string[] = [];
-		if (options.resumeLastSession) {
-			args.push("--continue");
-		}
-		if (options.skipPermissions) {
-			args.push("--dangerously-skip-permissions");
+	startPtySession(options: PtySessionOptions): ChildProcess {
+		if (process.platform === "win32") {
+			throw new Error(
+				"Interactive terminal is not yet supported on Windows. Use the Quick Ask modal instead."
+			);
 		}
 
-		const ptyProcess: IPty = pty.spawn(options.claudePath, args, {
-			name: "xterm-color",
-			cols: options.cols || 80,
-			rows: options.rows || 24,
-			cwd: options.workingDirectory,
-			env: {
-				...this.resolvedEnv,
-				TERM: "xterm-color",
-				COLORTERM: "truecolor",
-			},
+		const python = this.resolvePython();
+
+		const args = [options.claudePath];
+		if (options.resumeLastSession) args.push("--continue");
+		if (options.skipPermissions) args.push("--dangerously-skip-permissions");
+
+		return spawn(python, ["-c", pseudoterminalScript, ...args], {
+			cwd: options.workingDirectory || this.resolvedEnv["HOME"] || "/",
+			env: { ...this.resolvedEnv, TERM: "xterm-color", COLORTERM: "truecolor" },
+			stdio: ["pipe", "pipe", "pipe", "pipe"],
 		});
-
-		return ptyProcess;
 	}
 
-	resizePty(pty: IPty, cols: number, rows: number): void {
+	resizePty(proc: ChildProcess, cols: number, rows: number): void {
 		try {
-			pty.resize(cols, rows);
+			// FD #3 is the resize control channel — Python reads "COLSxROWS\n" and
+			// calls ioctl(TIOCSWINSZ) on the PTY master.
+			const cmdio = proc.stdio[3] as NodeJS.WritableStream | null;
+			cmdio?.write(`${cols}x${rows}\n`);
 		} catch {
 			// Process may have already exited
 		}
 	}
 
-	killPty(pty: IPty | null): void {
-		if (!pty) return;
+	writePty(proc: ChildProcess, data: string): void {
 		try {
-			pty.kill();
+			proc.stdin?.write(data);
 		} catch {
 			// Process may have already exited
 		}
+	}
+
+	killPty(proc: ChildProcess | null): void {
+		if (!proc) return;
+		try {
+			proc.kill("SIGTERM");
+		} catch {
+			// Process may have already exited
+		}
+	}
+
+	private resolvePython(): string {
+		for (const exe of ["python3", "python"]) {
+			try {
+				const result = execSync(`which ${exe}`, {
+					env: this.resolvedEnv,
+					timeout: 3000,
+				});
+				const p = result.toString().trim();
+				if (p) return p;
+			} catch {
+				// try next
+			}
+		}
+		throw new Error(
+			"Python 3 not found. Install it via Homebrew: brew install python3"
+		);
 	}
 
 	/**
@@ -138,7 +147,6 @@ export class ProcessManager {
 		return new Promise((resolve) => {
 			const timeoutMs = options.timeoutMs ?? 120000;
 
-			// --print with stdin input. Pipe full message (context + prompt) via stdin.
 			const args = ["--print", "--output-format", "json"];
 			if (options.model) args.push("--model", options.model);
 
@@ -148,7 +156,6 @@ export class ProcessManager {
 				stdio: ["pipe", "pipe", "pipe"],
 			});
 
-			// Write the full message to stdin
 			const fullMessage = context ? `${context}\n\n${prompt}` : prompt;
 			proc.stdin.write(fullMessage);
 			proc.stdin.end();
@@ -187,7 +194,6 @@ export class ProcessManager {
 
 				try {
 					const parsed = JSON.parse(stdout.trim());
-					// Claude Code --output-format json: { result: string, ... }
 					const text: string =
 						parsed.result ??
 						parsed.content?.[0]?.text ??
@@ -195,7 +201,6 @@ export class ProcessManager {
 						stdout.trim();
 					resolve({ success: true, text });
 				} catch {
-					// JSON parsing failed — return raw stdout
 					resolve({ success: true, text: stdout.trim() });
 				}
 			});
