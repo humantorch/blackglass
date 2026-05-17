@@ -197,6 +197,17 @@ export class ClaudeTerminalView extends ItemView {
 		thisPty.stdout?.on("data", onData);
 		thisPty.stderr?.on("data", onData);
 
+		// Catch spawn errors (e.g. binary not found) that arrive asynchronously.
+		// Without this handler Node.js throws an uncaught exception which Electron swallows,
+		// leaving the terminal silently empty.
+		thisPty.on("error", (err: Error) => {
+			if (this.pty !== thisPty) return;
+			this.pty = null;
+			const pythonHint = process.platform !== "win32" ? " and that Python 3 is installed" : "";
+			this.terminal?.writeln(`\r\n\x1b[31mFailed to start Claude Code: ${err.message}\x1b[0m`);
+			this.terminal?.writeln(`\r\n\x1b[33mCheck that '${settings.claudeBinaryPath}' is on your PATH${pythonHint}.\x1b[0m`);
+		});
+
 		// PTY exit
 		thisPty.on("close", (code: number | null) => {
 			// If this PTY has already been replaced (e.g. New Session was clicked),

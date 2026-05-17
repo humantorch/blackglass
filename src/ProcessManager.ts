@@ -106,14 +106,14 @@ export class ProcessManager {
 	}
 
 	private startWindowsSession(options: PtySessionOptions): ChildProcess {
-		const args = [options.claudePath];
+		const args: string[] = [];
 		if (options.resumeLastSession) args.push("--continue");
 		if (options.skipPermissions) args.push("--dangerously-skip-permissions");
 
-		// conhost.exe --headless creates a ConPTY session and relays VT sequences on
-		// stdout — giving Claude Code proper terminal semantics without native modules.
-		// No FD3 resize channel; resizePty() already no-ops when stdio[3] is undefined.
-		return spawn("conhost.exe", ["--headless", "--", ...args], {
+		// Spawn claude.exe directly with stdio pipes. No PTY wrapper is needed here —
+		// Claude Code detects the pipe environment and adjusts its output accordingly.
+		// Resize is a no-op on Windows (no FD3 channel); resizePty() handles this gracefully.
+		return spawn(options.claudePath, args, {
 			cwd: options.workingDirectory || this.resolvedEnv["USERPROFILE"] || "C:\\",
 			env: { ...this.resolvedEnv, TERM: "xterm-256color" },
 			stdio: ["pipe", "pipe", "pipe"],
