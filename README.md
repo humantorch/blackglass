@@ -7,6 +7,8 @@
 
 An Obsidian plugin that embeds [Claude Code](https://claude.ai/code) directly inside your vault: interactive terminal, quick-ask modal, and a built-in vault MCP server, all without leaving Obsidian.
 
+![Blackglass — Claude Code inside Obsidian](assets/screenshot.png)
+
 ## Features
 
 - **Interactive terminal** — full Claude Code session in an Obsidian sidebar panel (xterm.js)
