@@ -3,7 +3,8 @@
 [![GitHub release](https://img.shields.io/badge/release-v1.0.0-blue)](https://github.com/humantorch/blackglass/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-1.6%2B-7c3aed)](https://obsidian.md)
-[![Desktop only](https://img.shields.io/badge/platform-desktop-lightgrey)](https://obsidian.md/download)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey)](https://github.com/humantorch/blackglass#requirements)
+[![Python 3](https://img.shields.io/badge/python-3.6%2B-blue)](https://www.python.org/downloads/)
 
 Blackglass puts [Claude Code](https://claude.ai/code) inside Obsidian: not a reimplementation, not a wrapper, but the actual CLI running in a real terminal alongside your notes. Every slash command, every MCP tool, every session you'd have in a standalone terminal is available here. If you already use Claude Code, there's nothing new to learn.
 
