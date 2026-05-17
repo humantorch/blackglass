@@ -35,14 +35,9 @@ The vault MCP server is what makes it vault-native: a built-in server gives Clau
 
 ## Installation
 
-Blackglass is not yet listed in the Obsidian Community Plugin directory. Install manually:
+Search for **Blackglass** in Settings → Community Plugins → Browse, then install and enable it.
 
-1. Go to the [latest release](https://github.com/humantorch/blackglass/releases/latest) and download `main.js`, `styles.css`, and `manifest.json` from the Assets section
-2. Create the plugin folder and move the three files into it:
-   ```
-   <your-vault>/.obsidian/plugins/blackglass/
-   ```
-3. Open Obsidian → Settings → Community Plugins → enable **Blackglass**
+**Manual install:** Download `main.js`, `styles.css`, and `manifest.json` from the [latest release](https://github.com/humantorch/blackglass/releases/latest) and copy them into `<your-vault>/.obsidian/plugins/blackglass/`.
 
 ## Commands
 
