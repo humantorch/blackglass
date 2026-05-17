@@ -112,20 +112,13 @@ export class ProcessManager {
 
 		const cols = options.cols || 80;
 		const rows = options.rows || 24;
-		// Quote path to handle spaces (e.g. C:\Users\scott\.local\bin\claude.exe)
-		const quotedPath = options.claudePath.includes(" ")
-			? `"${options.claudePath}"`
-			: options.claudePath;
-		const claudeCmd = [quotedPath, ...args].join(" ");
 
-		// conhost.exe creates a ConPTY session so Claude Code sees a real terminal.
-		// Wrap in cmd.exe to set the console dimensions before Claude starts —
-		// without this, ConPTY defaults to 80x24 regardless of the xterm.js panel size.
-		return spawn("C:\\Windows\\System32\\conhost.exe", [
-			"--headless", "--",
-			"cmd.exe", "/c",
-			`mode con cols=${cols} lines=${rows} >nul 2>nul && ${claudeCmd}`,
-		], {
+		// conhost.exe creates a ConPTY session so Claude Code sees a real terminal rather
+		// than a pipe (which causes it to switch to --print mode). Use the absolute path
+		// since conhost.exe is not on Electron's PATH but is always at System32.
+		// Note: ConPTY defaults to 80x24 — panel resize and initial sizing are not
+		// supported without Win32 API access (known Windows limitation).
+		return spawn("C:\\Windows\\System32\\conhost.exe", ["--headless", "--", options.claudePath, ...args], {
 			cwd: options.workingDirectory || this.resolvedEnv["USERPROFILE"] || "C:\\",
 			env: { ...this.resolvedEnv, TERM: "xterm-256color", COLUMNS: String(cols), LINES: String(rows) },
 			stdio: ["pipe", "pipe", "pipe"],
