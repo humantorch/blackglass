@@ -33,6 +33,8 @@ The vault MCP server is what makes it vault-native: a built-in server gives Clau
 
 **Platform support:** The interactive terminal requires macOS or Linux. The Quick Ask modal works on all platforms including Windows. Full Windows terminal support requires native ConPTY integration and is planned for a future release.
 
+**Windows and Agent SDK credits:** The Quick Ask modal runs Claude Code in non-interactive (`-p`) mode. As of June 15, 2026, Anthropic bills this separately from interactive usage — Pro plans include $20/month of Agent SDK credits ([details](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan)). On Windows, where the terminal is not yet available, all Blackglass usage goes through Quick Ask and draws from this pool.
+
 ## Installation
 
 Search for **Blackglass** in Settings → Community Plugins → Browse, then install and enable it.
@@ -179,7 +181,7 @@ The symlink folder name should match the plugin ID (`blackglass`) so Obsidian ca
 
 ### Troubleshooting
 
-**"Interactive terminal is not yet supported on Windows"**: the terminal requires macOS or Linux. Use the Quick Ask modal on Windows — it works on all platforms. Full Windows terminal support is planned for a future release.
+**"Interactive terminal is not yet supported on Windows"**: the terminal requires macOS or Linux. Use the Quick Ask modal on Windows — it works on all platforms. Full Windows terminal support is planned for a future release. Note that Quick Ask on Windows draws from Anthropic's Agent SDK credit pool; see the note in Requirements above.
 
 **"Python 3 not found"**: install Python 3 from [python.org](https://www.python.org/downloads/) or via Homebrew (`brew install python3`). Python 3 ships with macOS 12.3+; if you're on an older version this may be missing.
 
