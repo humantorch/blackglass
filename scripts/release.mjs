@@ -46,7 +46,7 @@ const versions = JSON.parse(readFileSync(versionsPath, "utf8"));
 
 const oldVersion = manifest.version;
 const version = bumpVersion(oldVersion, bumpType);
-const tag = `v${version}`;
+const tag = version; // Obsidian requires tags without a 'v' prefix
 const zip = `blackglass-${version}.zip`;
 const notesFile = resolve(tmpdir(), `blackglass-release-notes-${version}.md`);
 
