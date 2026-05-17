@@ -1,6 +1,6 @@
 # Blackglass
 
-[![GitHub release](https://img.shields.io/badge/release-v1.0.0-blue)](https://github.com/humantorch/blackglass/releases/latest)
+[![GitHub release](https://img.shields.io/badge/release-v1.0.1-blue)](https://github.com/humantorch/blackglass/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-1.6%2B-7c3aed)](https://obsidian.md)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey)](https://github.com/humantorch/blackglass#requirements)
