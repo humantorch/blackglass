@@ -100,6 +100,15 @@ export class ClaudeTerminalView extends ItemView {
 			this.restartSession();
 		});
 
+		const clearBtn = toolbar.createEl("button", {
+			text: "Clear",
+			cls: "claude-code-toolbar-btn",
+		});
+		clearBtn.addEventListener("click", (e) => {
+			(e.currentTarget as HTMLButtonElement).blur();
+			this.terminal?.clear();
+		});
+
 		this.statusDot = toolbar.createDiv({ cls: "claude-code-status-dot" });
 		this.statusDot.title = "No session";
 
