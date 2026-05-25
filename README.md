@@ -23,6 +23,7 @@ The vault MCP server is what makes it vault-native: a built-in server gives Clau
 - **Vault-aware quick ask**: pre-fill the modal with the active note or selected text
 - **Per-query model selector**: choose the model directly in the quick ask modal; overrides the default without changing your setting
 - **Session resume**: picks up where you left off (`--continue`) on every open
+- **Theme-adaptive terminal**: terminal colors derived from the active Obsidian theme; updates live when you switch themes, including third-party themes
 - **Desktop-only**: takes full advantage of Electron's native process support
 
 ## Requirements
@@ -53,7 +54,7 @@ All commands are available via the command palette (Cmd+P):
 | Ask Claude about selection | Prefills the modal with the selected text |
 | Start new Claude Code session | Kills the current session and starts a clean fresh one |
 
-A ribbon icon (bot) also opens the terminal panel directly. The terminal toolbar has a **New session** button that does the same thing; it always starts completely fresh, regardless of the "Resume last session" setting.
+A ribbon icon (bot) also opens the terminal panel directly. The terminal toolbar has a **New session** button that starts a completely fresh session, a **Clear** button that wipes the terminal output without ending the session, and a status dot (green = active, grey = ended).
 
 Right-clicking any `.md` file in the file explorer shows an **Ask Claude about this** option, which opens the quick ask modal prefilled with that note's content.
 
@@ -68,6 +69,7 @@ Settings → Blackglass:
 | Quick ask model | Default | Model used by the quick ask modal. Can be overridden per-query in the modal itself. |
 | Terminal font size | `14` | Font size in pixels. |
 | Terminal font family | `monospace` | Font family dropdown populated from your system fonts. Falls back to a curated monospace list if font enumeration is unavailable. |
+| Terminal scrollback | `5000` | Number of lines kept in scroll history. Takes effect on next terminal open. Valid range: 100–100,000. |
 | Open panel on startup | off | Auto-open the terminal when Obsidian launches. |
 | Resume last session | on | Passes `--continue` to resume the previous conversation. |
 | Enable vault MCP server | on | Starts the built-in MCP server. Disable to run without vault tool access. |
