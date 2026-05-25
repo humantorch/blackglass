@@ -64,6 +64,7 @@ export class ClaudeTerminalView extends ItemView {
 	private pty: ChildProcess | null = null;
 	private resizeObserver: ResizeObserver | null = null;
 	private terminalInputDisposable: { dispose(): void } | null = null;
+	private statusDot: HTMLElement | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: ClaudeCodePlugin) {
 		super(leaf);
@@ -98,6 +99,9 @@ export class ClaudeTerminalView extends ItemView {
 			(e.currentTarget as HTMLButtonElement).blur();
 			this.restartSession();
 		});
+
+		this.statusDot = toolbar.createDiv({ cls: "claude-code-status-dot" });
+		this.statusDot.title = "No session";
 
 		// Terminal wrapper (fills remaining space)
 		const xtermWrapper = container.createDiv({ cls: "claude-code-xterm-wrapper" });
@@ -139,6 +143,12 @@ export class ClaudeTerminalView extends ItemView {
 		this.resizeObserver.observe(xtermWrapper);
 	}
 
+	private setSessionStatus(active: boolean): void {
+		if (!this.statusDot) return;
+		this.statusDot.toggleClass("claude-code-status-dot--active", active);
+		this.statusDot.title = active ? "Session active" : "Session ended";
+	}
+
 	private startSession(resumeLastSession?: boolean): void {
 		if (!this.terminal) return;
 
@@ -176,6 +186,10 @@ export class ClaudeTerminalView extends ItemView {
 		// by a newer session (e.g. user clicked New Session before this one exited).
 		const thisPty = this.pty;
 
+		thisPty.once("spawn", () => {
+			if (this.pty === thisPty) this.setSessionStatus(true);
+		});
+
 		// PTY output -> terminal display
 		const onData = (chunk: Buffer) => {
 			const data = chunk.toString("utf-8");
@@ -204,6 +218,7 @@ export class ClaudeTerminalView extends ItemView {
 		thisPty.on("error", (err: Error) => {
 			if (this.pty !== thisPty) return;
 			this.pty = null;
+			this.setSessionStatus(false);
 			const pythonHint = process.platform !== "win32" ? " and that Python 3 is installed" : "";
 			this.terminal?.writeln(`\r\n\x1b[31mFailed to start Claude Code: ${err.message}\x1b[0m`);
 			this.terminal?.writeln(`\r\n\x1b[33mCheck that '${settings.claudeBinaryPath}' is on your PATH${pythonHint}.\x1b[0m`);
@@ -216,6 +231,7 @@ export class ClaudeTerminalView extends ItemView {
 			if (this.pty !== thisPty) return;
 
 			this.pty = null;
+			this.setSessionStatus(false);
 
 			const exitCode = code ?? 1;
 
@@ -250,6 +266,7 @@ export class ClaudeTerminalView extends ItemView {
 			this.plugin.processManager.killPty(this.pty);
 			this.pty = null;
 		}
+		this.setSessionStatus(false);
 		// Full terminal reset — safe because the PTY is already dead.
 		// Always starts fresh (ignores the resumeLastSession setting) since
 		// the user is explicitly requesting a clean slate.

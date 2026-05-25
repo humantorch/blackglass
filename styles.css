@@ -40,6 +40,22 @@
 	color: var(--text-normal);
 }
 
+/* ---- Session status dot ---- */
+
+.claude-code-status-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	margin-left: auto;
+	flex-shrink: 0;
+	background-color: var(--background-modifier-border);
+	transition: background-color 0.3s;
+}
+
+.claude-code-status-dot--active {
+	background-color: var(--color-green);
+}
+
 /* ---- xterm wrapper ---- */
 
 .claude-code-xterm-wrapper {
