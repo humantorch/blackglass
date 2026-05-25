@@ -77,6 +77,22 @@ export class SettingsTab extends PluginSettingTab {
 					})
 			);
 
+		new Setting(containerEl)
+			.setName("Terminal scrollback")
+			.setDesc("Number of lines to keep in the terminal's scroll history (default 5000). Takes effect the next time the terminal is opened.")
+			.addText((text) =>
+				text
+					.setPlaceholder("5000")
+					.setValue(String(this.plugin.settings.scrollback))
+					.onChange(async (value) => {
+						const parsed = parseInt(value, 10);
+						if (!isNaN(parsed) && parsed >= 100 && parsed <= 100000) {
+							this.plugin.settings.scrollback = parsed;
+							await this.plugin.saveSettings();
+						}
+					})
+			);
+
 		const fontSetting = new Setting(containerEl)
 			.setName("Terminal font family")
 			.setDesc("Font family for the terminal panel. Loading system fonts...");

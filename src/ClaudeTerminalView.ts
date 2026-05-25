@@ -127,7 +127,7 @@ export class ClaudeTerminalView extends ItemView {
 			theme: getXtermTheme(),
 			cursorBlink: true,
 			allowProposedApi: true,
-			scrollback: 5000,
+			scrollback: this.plugin.settings.scrollback,
 		});
 
 		this.terminal.loadAddon(this.fitAddon);

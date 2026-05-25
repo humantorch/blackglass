@@ -10,6 +10,7 @@ export interface ClaudeCodeSettings {
 	mcpServerPort: number;
 	mcpReadOnly: boolean;
 	skipPermissions: boolean;
+	scrollback: number;
 }
 
 export const DEFAULT_SETTINGS: ClaudeCodeSettings = {
@@ -24,6 +25,7 @@ export const DEFAULT_SETTINGS: ClaudeCodeSettings = {
 	mcpServerPort: 27123,
 	mcpReadOnly: false,
 	skipPermissions: false,
+	scrollback: 5000,
 };
 
 export const CLAUDE_TERMINAL_VIEW_TYPE = "claude-code-terminal";
