@@ -67,8 +67,9 @@ Settings → Blackglass:
 | Claude binary path | `claude` | Path to the `claude` CLI. Use full path if not on PATH. |
 | Working directory | *(vault root)* | Directory Claude starts in. Defaults to vault root. |
 | Quick ask model | Default | Model used by the quick ask modal. Can be overridden per-query in the modal itself. |
-| Terminal font size | `14` | Font size in pixels. |
-| Terminal font family | `monospace` | Font family dropdown populated from your system fonts. Falls back to a curated monospace list if font enumeration is unavailable. |
+| Terminal font size | `14` | Font size in pixels. Updates the running terminal immediately. |
+| Terminal font family | `monospace` | Font family for the terminal. Populated from your system fonts; falls back to a curated list if font enumeration is unavailable. Updates the running terminal immediately. |
+| Terminal font weight | `Normal` | Weight or style variant for the selected font. Options are derived from your system fonts (e.g. Light, Regular, SemiBold, Bold). Updates the running terminal immediately. |
 | Terminal scrollback | `5000` | Number of lines kept in scroll history. Takes effect on next terminal open. Valid range: 100–100,000. |
 | Open panel on startup | off | Auto-open the terminal when Obsidian launches. |
 | Resume last session | on | Passes `--continue` to resume the previous conversation. |

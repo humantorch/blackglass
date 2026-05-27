@@ -113,6 +113,7 @@ export class ClaudeTerminalView extends ItemView {
 		this.terminal = new Terminal({
 			fontFamily: this.plugin.settings.fontFamily,
 			fontSize: this.plugin.settings.fontSize,
+			fontWeight: this.plugin.settings.fontWeight as any,
 			theme: getXtermTheme(),
 			cursorBlink: true,
 			allowProposedApi: true,
@@ -276,6 +277,14 @@ export class ClaudeTerminalView extends ItemView {
 		// the user is explicitly requesting a clean slate.
 		this.terminal?.reset();
 		this.startSession(false);
+	}
+
+	updateFont(size: number, family: string, weight: string): void {
+		if (!this.terminal) return;
+		this.terminal.options.fontSize = size;
+		this.terminal.options.fontFamily = family;
+		this.terminal.options.fontWeight = weight as any;
+		this.fitAddon?.fit();
 	}
 
 	async onClose(): Promise<void> {

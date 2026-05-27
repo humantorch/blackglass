@@ -175,6 +175,14 @@ export default class ClaudeCodePlugin extends Plugin {
 		this.app.workspace.revealLeaf(leaf);
 	}
 
+	applyFontToTerminal(): void {
+		this.getClaudeView()?.updateFont(
+			this.settings.fontSize,
+			this.settings.fontFamily,
+			this.settings.fontWeight
+		);
+	}
+
 	getClaudeView(): ClaudeTerminalView | null {
 		const leaves = this.app.workspace.getLeavesOfType(
 			CLAUDE_TERMINAL_VIEW_TYPE

@@ -1,8 +1,9 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, DropdownComponent, PluginSettingTab, Setting } from "obsidian";
 import type ClaudeCodePlugin from "./main";
 
 export class SettingsTab extends PluginSettingTab {
 	plugin: ClaudeCodePlugin;
+	private fontVariantMap: Map<string, Array<{ label: string; weight: string }>> = new Map();
 
 	constructor(app: App, plugin: ClaudeCodePlugin) {
 		super(app, plugin);
@@ -73,6 +74,7 @@ export class SettingsTab extends PluginSettingTab {
 						if (!isNaN(parsed) && parsed > 0) {
 							this.plugin.settings.fontSize = parsed;
 							await this.plugin.saveSettings();
+							this.plugin.applyFontToTerminal();
 						}
 					})
 			);
@@ -93,10 +95,15 @@ export class SettingsTab extends PluginSettingTab {
 					})
 			);
 
-		const fontSetting = new Setting(containerEl)
+		// Create stubs synchronously so they appear in the right position,
+		// then fill in the dropdowns asynchronously once font data is loaded.
+		const familySetting = new Setting(containerEl)
 			.setName("Terminal font family")
-			.setDesc("Font family for the terminal panel. Loading system fonts...");
-		this.buildFontDropdown(fontSetting);
+			.setDesc("Font family for the terminal panel. Loading fonts...");
+		const weightSetting = new Setting(containerEl)
+			.setName("Terminal font weight")
+			.setDesc("Weight or style variant for the selected font. Loading fonts...");
+		this.buildFontDropdowns(familySetting, weightSetting);
 
 		new Setting(containerEl)
 			.setName("Open Claude panel on startup")
@@ -193,61 +200,146 @@ export class SettingsTab extends PluginSettingTab {
 			);
 	}
 
-	private async buildFontDropdown(setting: Setting): Promise<void> {
-		const fonts = await this.getSystemFonts();
-		setting.setDesc("Font family for the terminal panel.");
-		setting.addDropdown((dropdown) => {
-			for (const font of fonts) {
-				dropdown.addOption(font, font);
+	private async buildFontDropdowns(familySetting: Setting, weightSetting: Setting): Promise<void> {
+		const { families, variantMap } = await this.getFontData();
+		this.fontVariantMap = variantMap;
+
+		let variantDropdown: DropdownComponent | null = null;
+
+		familySetting.setDesc("Font family for the terminal panel.");
+		familySetting.addDropdown((dd) => {
+			for (const font of families) {
+				dd.addOption(font, font);
 			}
-			// Ensure the saved value is present even if not in the list
 			const current = this.plugin.settings.fontFamily;
-			if (current && !fonts.includes(current)) {
-				dropdown.addOption(current, current);
+			if (current && !families.includes(current)) {
+				dd.addOption(current, current);
 			}
-			dropdown.setValue(this.plugin.settings.fontFamily);
-			dropdown.onChange(async (value) => {
+			dd.setValue(current);
+			dd.onChange(async (value) => {
 				this.plugin.settings.fontFamily = value;
+				this.plugin.settings.fontWeight = "normal";
 				await this.plugin.saveSettings();
+				this.plugin.applyFontToTerminal();
+				if (variantDropdown) {
+					this.populateVariantOptions(variantDropdown, value);
+					variantDropdown.setValue("normal");
+				}
+			});
+		});
+
+		weightSetting.setDesc("Weight or style variant for the selected font.");
+		weightSetting.addDropdown((dd) => {
+			variantDropdown = dd;
+			this.populateVariantOptions(dd, this.plugin.settings.fontFamily);
+			// Restore saved weight, fall back to normal if not present
+			const saved = this.plugin.settings.fontWeight;
+			const available = Array.from(dd.selectEl.options).map((o) => o.value);
+			dd.setValue(available.includes(saved) ? saved : "normal");
+			dd.onChange(async (value) => {
+				this.plugin.settings.fontWeight = value;
+				await this.plugin.saveSettings();
+				this.plugin.applyFontToTerminal();
 			});
 		});
 	}
 
-	private async getSystemFonts(): Promise<string[]> {
-		// Try Local Font Access API — available in Chromium 103+ / Electron
+	private populateVariantOptions(dd: DropdownComponent, family: string): void {
+		dd.selectEl.innerHTML = "";
+		const variants = this.fontVariantMap.get(family);
+		if (variants && variants.length > 0) {
+			for (const v of variants) {
+				dd.addOption(v.weight, v.label);
+			}
+		} else {
+			dd.addOption("normal", "Normal");
+			dd.addOption("300", "Light (300)");
+			dd.addOption("500", "Medium (500)");
+			dd.addOption("600", "SemiBold (600)");
+			dd.addOption("bold", "Bold");
+		}
+	}
+
+	private styleToWeight(style: string): string {
+		const s = style.toLowerCase().replace(/[\s\-]/g, "");
+		if (s.includes("hairline") || s === "thin") return "100";
+		if (s.includes("extralight") || s.includes("ultralight")) return "200";
+		if (s.includes("light")) return "300";
+		if (s.includes("medium")) return "500";
+		if (s.includes("semibold") || s.includes("demibold")) return "600";
+		if (s.includes("extrabold") || s.includes("ultrabold")) return "800";
+		if (s.includes("black") || s.includes("heavy")) return "900";
+		if (s.includes("bold")) return "bold";
+		return "normal";
+	}
+
+	private async getFontData(): Promise<{
+		families: string[];
+		variantMap: Map<string, Array<{ label: string; weight: string }>>;
+	}> {
 		if ("queryLocalFonts" in window) {
 			try {
 				const rawFonts = await (window as any).queryLocalFonts();
-				const families: string[] = [
-					...new Set<string>(rawFonts.map((f: any) => f.family as string)),
-				].sort((a, b) => a.localeCompare(b));
-				if (families.length > 0) return families;
+				const familySet = new Set<string>();
+				const variantMap = new Map<string, Array<{ label: string; weight: string }>>();
+
+				for (const font of rawFonts) {
+					const family = font.family as string;
+					const style = font.style as string;
+					familySet.add(family);
+
+					// Skip italic/oblique — not a useful weight choice for a terminal
+					const styleLower = style.toLowerCase();
+					if (styleLower.includes("italic") || styleLower.includes("oblique")) continue;
+
+					if (!variantMap.has(family)) variantMap.set(family, []);
+					const weight = this.styleToWeight(style);
+					const variants = variantMap.get(family)!;
+					// One entry per weight value — keep the first style name encountered
+					if (!variants.some((v) => v.weight === weight)) {
+						variants.push({ label: style, weight });
+					}
+				}
+
+				// Sort families alphabetically, sort each family's variants by weight
+				const families = [...familySet].sort((a, b) => a.localeCompare(b));
+				for (const variants of variantMap.values()) {
+					variants.sort((a, b) => {
+						const wa = parseInt(a.weight) || (a.weight === "bold" ? 700 : 400);
+						const wb = parseInt(b.weight) || (b.weight === "bold" ? 700 : 400);
+						return wa - wb;
+					});
+				}
+
+				if (families.length > 0) return { families, variantMap };
 			} catch {
 				// Permission denied or API unavailable — fall through to curated list
 			}
 		}
 
-		// Fallback: curated list of widely-used fonts
-		return [
-			"monospace",
-			"Cascadia Code",
-			"Cascadia Mono",
-			"Consolas",
-			"Courier New",
-			"DejaVu Sans Mono",
-			"Fira Code",
-			"Fira Mono",
-			"Hack",
-			"IBM Plex Mono",
-			"Inconsolata",
-			"JetBrains Mono",
-			"Menlo",
-			"Monaco",
-			"Noto Sans Mono",
-			"Roboto Mono",
-			"SF Mono",
-			"Source Code Pro",
-			"Ubuntu Mono",
-		];
+		return {
+			families: [
+				"monospace",
+				"Cascadia Code",
+				"Cascadia Mono",
+				"Consolas",
+				"Courier New",
+				"DejaVu Sans Mono",
+				"Fira Code",
+				"Fira Mono",
+				"Hack",
+				"IBM Plex Mono",
+				"Inconsolata",
+				"JetBrains Mono",
+				"Menlo",
+				"Monaco",
+				"Noto Sans Mono",
+				"Roboto Mono",
+				"SF Mono",
+				"Source Code Pro",
+				"Ubuntu Mono",
+			],
+			variantMap: new Map(),
+		};
 	}
 }

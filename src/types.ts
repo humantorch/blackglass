@@ -6,6 +6,7 @@ export interface ClaudeCodeSettings {
 	resumeLastSession: boolean;
 	fontSize: number;
 	fontFamily: string;
+	fontWeight: string;
 	mcpServerEnabled: boolean;
 	mcpServerPort: number;
 	mcpReadOnly: boolean;
@@ -21,6 +22,7 @@ export const DEFAULT_SETTINGS: ClaudeCodeSettings = {
 	resumeLastSession: true,
 	fontSize: 14,
 	fontFamily: "monospace",
+	fontWeight: "normal",
 	mcpServerEnabled: true,
 	mcpServerPort: 27123,
 	mcpReadOnly: false,
