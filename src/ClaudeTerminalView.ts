@@ -56,6 +56,7 @@ export class ClaudeTerminalView extends ItemView {
 	private statusDot: HTMLElement | null = null;
 	private mcpDot: HTMLElement | null = null;
 	private mcpIndicator: HTMLElement | null = null;
+	private versionLabel: HTMLElement | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: ClaudeCodePlugin) {
 		super(leaf);
@@ -119,9 +120,13 @@ export class ClaudeTerminalView extends ItemView {
 
 		const version = this.plugin.manifest.version;
 		const isPrerelease = /[^0-9.]/.test(version);
-		const versionLabel = toolbar.createDiv({ cls: "claude-code-version" });
-		versionLabel.setText(`v${version}`);
-		if (isPrerelease) versionLabel.addClass("claude-code-version--prerelease");
+		this.versionLabel = toolbar.createDiv({ cls: "claude-code-version" });
+		this.versionLabel.setText(`v${version}`);
+		if (isPrerelease) this.versionLabel.addClass("claude-code-version--prerelease");
+
+		if (this.plugin.availableVersion) {
+			this.showUpdateAvailable(this.plugin.availableVersion);
+		}
 
 		// Terminal wrapper (fills remaining space)
 		const xtermWrapper = container.createDiv({ cls: "claude-code-xterm-wrapper" });
@@ -313,6 +318,19 @@ export class ClaudeTerminalView extends ItemView {
 		// the user is explicitly requesting a clean slate.
 		this.terminal?.reset();
 		this.startSession(false);
+	}
+
+	showUpdateAvailable(version: string): void {
+		if (!this.versionLabel) return;
+		this.versionLabel.setText(`v${version} ↑`);
+		this.versionLabel.addClass("claude-code-version--update");
+		this.versionLabel.title = `Blackglass ${version} is available — click to update`;
+		this.versionLabel.style.cursor = "pointer";
+		this.versionLabel.onclick = () => {
+			const setting = (this.plugin.app as any).setting;
+			setting.open();
+			setting.openTabById("community-plugins");
+		};
 	}
 
 	updateMcpStatus(): void {

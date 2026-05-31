@@ -1,4 +1,4 @@
-import { Menu, Notice, Plugin, TFile, WorkspaceLeaf } from "obsidian";
+import { Menu, Notice, Plugin, RequestUrlResponse, TFile, WorkspaceLeaf, requestUrl } from "obsidian";
 import * as fs from "fs";
 import * as path from "path";
 import {
@@ -19,6 +19,7 @@ export default class ClaudeCodePlugin extends Plugin {
 	processManager!: ProcessManager;
 	contextBuilder!: ContextBuilder;
 	vaultMcpServer: VaultMcpServer | null = null;
+	availableVersion: string | null = null;
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
@@ -144,6 +145,12 @@ export default class ClaudeCodePlugin extends Plugin {
 		if (this.settings.mcpServerEnabled) {
 			await this.startVaultMcpServer();
 		}
+
+		// Check for updates once on load, then every 24 hours
+		this.app.workspace.onLayoutReady(() => this.checkForUpdate());
+		this.registerInterval(
+			window.setInterval(() => this.checkForUpdate(), 24 * 60 * 60 * 1000)
+		);
 	}
 
 	onunload(): void {
@@ -173,6 +180,36 @@ export default class ClaudeCodePlugin extends Plugin {
 		});
 
 		this.app.workspace.revealLeaf(leaf);
+	}
+
+	private async checkForUpdate(): Promise<void> {
+		try {
+			const resp: RequestUrlResponse = await requestUrl({
+				url: "https://api.github.com/repos/humantorch/blackglass/releases/latest",
+				headers: { "User-Agent": "blackglass-obsidian-plugin" },
+			});
+			const latest: string = resp.json?.tag_name?.replace(/^v/, "") ?? "";
+			const current = this.manifest.version;
+			if (latest && latest !== current && this.isNewerVersion(latest, current)) {
+				this.availableVersion = latest;
+				this.getClaudeView()?.showUpdateAvailable(latest);
+				new Notice(
+					`Blackglass ${latest} is available. Click the version in the toolbar to update.`,
+					10000
+				);
+			}
+		} catch {
+			// Network unavailable or API rate-limited — silently skip
+		}
+	}
+
+	private isNewerVersion(latest: string, current: string): boolean {
+		const parse = (v: string) => v.split(".").map((n) => parseInt(n) || 0);
+		const [lMaj, lMin, lPat] = parse(latest);
+		const [cMaj, cMin, cPat] = parse(current);
+		if (lMaj !== cMaj) return lMaj > cMaj;
+		if (lMin !== cMin) return lMin > cMin;
+		return lPat > cPat;
 	}
 
 	applyFontToTerminal(): void {

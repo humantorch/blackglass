@@ -23,22 +23,6 @@
 	align-items: center;
 }
 
-/* ---- Wordmark ---- */
-
-.claude-code-wordmark {
-	font-weight: 700;
-	font-size: 0.9em;
-	letter-spacing: -0.02em;
-	color: var(--text-normal);
-	margin-right: 4px;
-	user-select: none;
-	flex-shrink: 0;
-}
-
-.claude-code-wordmark-accent {
-	color: var(--interactive-accent);
-}
-
 .claude-code-toolbar-btn {
 	background: var(--interactive-normal);
 	color: var(--text-muted);
@@ -54,6 +38,22 @@
 .claude-code-toolbar-btn:hover {
 	background: var(--interactive-hover);
 	color: var(--text-normal);
+}
+
+/* ---- Wordmark ---- */
+
+.claude-code-wordmark {
+	font-weight: 700;
+	font-size: 0.9em;
+	letter-spacing: -0.02em;
+	color: var(--text-normal);
+	margin-right: 4px;
+	user-select: none;
+	flex-shrink: 0;
+}
+
+.claude-code-wordmark-accent {
+	color: var(--interactive-accent);
 }
 
 /* ---- Status indicators (dot + label pairs) ---- */
@@ -78,6 +78,8 @@
 	user-select: none;
 }
 
+/* ---- Session status dot ---- */
+
 .claude-code-status-dot {
 	width: 8px;
 	height: 8px;
@@ -90,6 +92,8 @@
 .claude-code-status-dot--active {
 	background-color: var(--color-green);
 }
+
+/* ---- MCP status dot ---- */
 
 .claude-code-mcp-dot {
 	width: 8px;
@@ -116,6 +120,14 @@
 
 .claude-code-version--prerelease {
 	color: var(--color-yellow);
+}
+
+.claude-code-version--update {
+	color: var(--color-yellow);
+}
+
+.claude-code-version--update:hover {
+	color: var(--text-normal);
 }
 
 /* ---- xterm wrapper ---- */
