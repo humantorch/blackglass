@@ -1,4 +1,4 @@
-import { App, DropdownComponent, PluginSettingTab, Setting } from "obsidian";
+import { App, DropdownComponent, Notice, PluginSettingTab, Setting } from "obsidian";
 import type ClaudeCodePlugin from "./main";
 
 export class SettingsTab extends PluginSettingTab {
@@ -155,7 +155,7 @@ export class SettingsTab extends PluginSettingTab {
 			.setName("Enable vault MCP server")
 			.setDesc(
 				"Starts a local MCP server that gives Claude vault-aware tools (read, search, create, update notes). " +
-				"Registers automatically in .claude/settings.json in the vault root. Restart the plugin after changing this setting."
+				"Registers automatically in .mcp.json in the vault root."
 			)
 			.addToggle((toggle) =>
 				toggle
@@ -163,6 +163,13 @@ export class SettingsTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.mcpServerEnabled = value;
 						await this.plugin.saveSettings();
+						if (value) {
+							await this.plugin.startVaultMcpServer();
+							new Notice("Vault MCP server started. Start a new session for Claude to pick it up.");
+						} else {
+							this.plugin.stopVaultMcpServer();
+							new Notice("Vault MCP server stopped. Start a new session for the change to take effect in Claude.");
+						}
 					})
 			);
 
@@ -170,7 +177,7 @@ export class SettingsTab extends PluginSettingTab {
 			.setName("Read-only vault access")
 			.setDesc(
 				"When enabled, Claude can read and search notes but cannot create or update them. " +
-				"Restart the plugin after changing."
+				"Takes effect the next time the MCP server starts."
 			)
 			.addToggle((toggle) =>
 				toggle

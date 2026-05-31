@@ -23,6 +23,22 @@
 	align-items: center;
 }
 
+/* ---- Wordmark ---- */
+
+.claude-code-wordmark {
+	font-weight: 700;
+	font-size: 0.9em;
+	letter-spacing: -0.02em;
+	color: var(--text-normal);
+	margin-right: 4px;
+	user-select: none;
+	flex-shrink: 0;
+}
+
+.claude-code-wordmark-accent {
+	color: var(--interactive-accent);
+}
+
 .claude-code-toolbar-btn {
 	background: var(--interactive-normal);
 	color: var(--text-muted);
@@ -40,19 +56,51 @@
 	color: var(--text-normal);
 }
 
-/* ---- Session status dot ---- */
+/* ---- Status indicators (dot + label pairs) ---- */
+
+.claude-code-indicator {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	margin-left: auto;
+	flex-shrink: 0;
+	cursor: default;
+}
+
+.claude-code-indicator + .claude-code-indicator {
+	margin-left: 8px;
+}
+
+.claude-code-indicator-label {
+	font-size: 0.72em;
+	color: var(--text-faint);
+	font-family: var(--font-monospace);
+	user-select: none;
+}
 
 .claude-code-status-dot {
 	width: 8px;
 	height: 8px;
 	border-radius: 50%;
-	margin-left: auto;
 	flex-shrink: 0;
 	background-color: var(--background-modifier-border);
 	transition: background-color 0.3s;
 }
 
 .claude-code-status-dot--active {
+	background-color: var(--color-green);
+}
+
+.claude-code-mcp-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	flex-shrink: 0;
+	background-color: var(--background-modifier-border);
+	transition: background-color 0.3s;
+}
+
+.claude-code-mcp-dot--active {
 	background-color: var(--color-green);
 }
 

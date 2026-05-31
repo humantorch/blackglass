@@ -192,7 +192,7 @@ export default class ClaudeCodePlugin extends Plugin {
 		return view instanceof ClaudeTerminalView ? view : null;
 	}
 
-	private async startVaultMcpServer(): Promise<void> {
+	async startVaultMcpServer(): Promise<void> {
 		const vaultRoot = (this.app.vault.adapter as any).getBasePath() as string;
 		this.vaultMcpServer = new VaultMcpServer(this.app, this.settings.mcpServerPort, this.settings.mcpReadOnly);
 		try {
@@ -203,14 +203,16 @@ export default class ClaudeCodePlugin extends Plugin {
 			console.error("Blackglass: failed to start vault MCP server:", err);
 			this.vaultMcpServer = null;
 		}
+		this.getClaudeView()?.updateMcpStatus();
 	}
 
-	private stopVaultMcpServer(): void {
+	stopVaultMcpServer(): void {
 		if (!this.vaultMcpServer) return;
 		const vaultRoot = (this.app.vault.adapter as any).getBasePath() as string;
 		this.vaultMcpServer.stop();
 		this.vaultMcpServer = null;
 		this.deregisterMcpFromProjectSettings(vaultRoot);
+		this.getClaudeView()?.updateMcpStatus();
 	}
 
 	private registerMcpInProjectSettings(vaultRoot: string, port: number, token: string): void {

@@ -54,6 +54,8 @@ export class ClaudeTerminalView extends ItemView {
 	private themeObserver: MutationObserver | null = null;
 	private terminalInputDisposable: { dispose(): void } | null = null;
 	private statusDot: HTMLElement | null = null;
+	private mcpDot: HTMLElement | null = null;
+	private mcpIndicator: HTMLElement | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: ClaudeCodePlugin) {
 		super(leaf);
@@ -80,10 +82,15 @@ export class ClaudeTerminalView extends ItemView {
 		// Toolbar
 		const toolbar = container.createDiv({ cls: "claude-code-toolbar" });
 
+		const wordmark = toolbar.createDiv({ cls: "claude-code-wordmark" });
+		wordmark.createSpan({ text: "Black" });
+		wordmark.createSpan({ cls: "claude-code-wordmark-accent", text: "glass" });
+
 		const newSessionBtn = toolbar.createEl("button", {
 			text: "New session",
 			cls: "claude-code-toolbar-btn",
 		});
+		newSessionBtn.title = "Start a new Claude Code session";
 		newSessionBtn.addEventListener("click", (e) => {
 			(e.currentTarget as HTMLButtonElement).blur();
 			this.restartSession();
@@ -93,13 +100,22 @@ export class ClaudeTerminalView extends ItemView {
 			text: "Clear",
 			cls: "claude-code-toolbar-btn",
 		});
+		clearBtn.title = "Clear terminal output without ending the session";
 		clearBtn.addEventListener("click", (e) => {
 			(e.currentTarget as HTMLButtonElement).blur();
 			this.terminal?.clear();
 		});
 
-		this.statusDot = toolbar.createDiv({ cls: "claude-code-status-dot" });
+		const sessionIndicator = toolbar.createDiv({ cls: "claude-code-indicator" });
+		this.statusDot = sessionIndicator.createDiv({ cls: "claude-code-status-dot" });
+		sessionIndicator.createSpan({ cls: "claude-code-indicator-label", text: "session" });
 		this.statusDot.title = "No session";
+		sessionIndicator.title = "No session";
+
+		this.mcpIndicator = toolbar.createDiv({ cls: "claude-code-indicator" });
+		this.mcpDot = this.mcpIndicator.createDiv({ cls: "claude-code-mcp-dot" });
+		this.mcpIndicator.createSpan({ cls: "claude-code-indicator-label", text: "MCP" });
+		this.updateMcpStatus();
 
 		const version = this.plugin.manifest.version;
 		const isPrerelease = /[^0-9.]/.test(version);
@@ -156,8 +172,10 @@ export class ClaudeTerminalView extends ItemView {
 
 	private setSessionStatus(active: boolean): void {
 		if (!this.statusDot) return;
+		const title = active ? "Session active" : "Session ended";
 		this.statusDot.toggleClass("claude-code-status-dot--active", active);
-		this.statusDot.title = active ? "Session active" : "Session ended";
+		this.statusDot.title = title;
+		if (this.statusDot.parentElement) this.statusDot.parentElement.title = title;
 	}
 
 	private startSession(resumeLastSession?: boolean): void {
@@ -295,6 +313,19 @@ export class ClaudeTerminalView extends ItemView {
 		// the user is explicitly requesting a clean slate.
 		this.terminal?.reset();
 		this.startSession(false);
+	}
+
+	updateMcpStatus(): void {
+		if (!this.mcpDot || !this.mcpIndicator) return;
+		const mcpPort = this.plugin.vaultMcpServer?.getActualPort() ?? null;
+		this.mcpDot.toggleClass("claude-code-mcp-dot--active", mcpPort !== null);
+		const title = mcpPort !== null
+			? `Vault MCP server running on port ${mcpPort}`
+			: this.plugin.settings.mcpServerEnabled
+				? "Vault MCP server failed to start"
+				: "Vault MCP server disabled";
+		this.mcpDot.title = title;
+		this.mcpIndicator.title = title;
 	}
 
 	updateFont(size: number, family: string, weight: string): void {
