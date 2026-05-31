@@ -20,7 +20,8 @@ The vault MCP server is what makes it vault-native: a built-in server gives Clau
 - **Authenticated MCP server**: auto-generated Bearer token written to `.mcp.json` on every launch; any other local process is denied access
 - **Read-only vault mode**: optional setting to hide write tools from Claude entirely, limiting it to read and search only
 - **Quick ask modal**: one-shot queries using Claude Code's `--print` mode; no terminal required; renders responses as Markdown
-- **Context menu integration**: right-click any `.md` file to ask Claude about it; pre-fill with your active note or selected text
+- **File explorer context menu**: right-click any `.md` file and choose "Ask Claude about this" to query Claude about it without opening it
+- **Vault-aware quick ask**: pre-fill the modal with the active note or selected text
 - **Per-query model selector**: choose the model directly in the quick ask modal; overrides the default without changing your setting
 - **Session resume**: picks up where you left off (`--continue`) on every open
 - **Theme-adaptive terminal**: terminal colors derived from the active Obsidian theme; updates live when you switch themes
