@@ -101,6 +101,12 @@ export class ClaudeTerminalView extends ItemView {
 		this.statusDot = toolbar.createDiv({ cls: "claude-code-status-dot" });
 		this.statusDot.title = "No session";
 
+		const version = this.plugin.manifest.version;
+		const isPrerelease = /[^0-9.]/.test(version);
+		const versionLabel = toolbar.createDiv({ cls: "claude-code-version" });
+		versionLabel.setText(`v${version}`);
+		if (isPrerelease) versionLabel.addClass("claude-code-version--prerelease");
+
 		// Terminal wrapper (fills remaining space)
 		const xtermWrapper = container.createDiv({ cls: "claude-code-xterm-wrapper" });
 

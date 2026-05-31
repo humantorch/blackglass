@@ -56,6 +56,20 @@
 	background-color: var(--color-green);
 }
 
+/* ---- Version label ---- */
+
+.claude-code-version {
+	font-size: 0.72em;
+	color: var(--text-faint);
+	margin-left: 4px;
+	font-family: var(--font-monospace);
+	user-select: none;
+}
+
+.claude-code-version--prerelease {
+	color: var(--color-yellow);
+}
+
 /* ---- xterm wrapper ---- */
 
 .claude-code-xterm-wrapper {
