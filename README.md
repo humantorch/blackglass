@@ -11,7 +11,7 @@ Blackglass puts [Claude Code](https://claude.ai/code) inside Obsidian: not a rei
 
 The vault MCP server is what makes it vault-native: a built-in server gives Claude structured, authenticated access to your notes (reading, searching, and writing) without any configuration on your part.
 
-![Blackglass screenshot](https://raw.githubusercontent.com/humantorch/blackglass/main/plugin/assets/blackglass.png)
+![Blackglass screenshot](assets/blackglass.png)
 
 ## Features
 
