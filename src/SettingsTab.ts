@@ -55,6 +55,7 @@ export class SettingsTab extends PluginSettingTab {
 					.addOption("claude-haiku-4-5-20251001", "Haiku 4.5")
 					.addOption("claude-sonnet-4-6", "Sonnet 4.6")
 					.addOption("claude-opus-4-7", "Opus 4.7")
+					.addOption("claude-opus-4-8", "Opus 4.8")
 					.setValue(this.plugin.settings.quickAskModel)
 					.onChange(async (value) => {
 						this.plugin.settings.quickAskModel = value;
