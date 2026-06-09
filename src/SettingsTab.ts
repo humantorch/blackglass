@@ -33,11 +33,11 @@ export class SettingsTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Claude binary path")
 			.setDesc(
-				"Path to the claude CLI executable. Use 'claude' if it's on your PATH, or provide the full absolute path (e.g. /usr/local/bin/claude)."
+				"Path to the Claude CLI executable. Use 'Claude' if it's on your system path, or provide the full absolute path."
 			)
 			.addText((text) =>
 				text
-					.setPlaceholder("claude")
+					.setPlaceholder("Claude")
 					.setValue(this.plugin.settings.claudeBinaryPath)
 					.onChange(async (value) => {
 						this.plugin.settings.claudeBinaryPath = value.trim() || "claude";
@@ -52,7 +52,7 @@ export class SettingsTab extends PluginSettingTab {
 			)
 			.addText((text) =>
 				text
-					.setPlaceholder("(vault root)")
+					.setPlaceholder("(Vault root)")
 					.setValue(this.plugin.settings.workingDirectory)
 					.onChange(async (value) => {
 						this.plugin.settings.workingDirectory = value.trim();

@@ -169,7 +169,7 @@ export default class ClaudeCodePlugin extends Plugin {
 			CLAUDE_TERMINAL_VIEW_TYPE
 		);
 		if (existing.length > 0) {
-			this.app.workspace.revealLeaf(existing[0]);
+			void this.app.workspace.revealLeaf(existing[0]);
 			return;
 		}
 
@@ -182,7 +182,7 @@ export default class ClaudeCodePlugin extends Plugin {
 			active: true,
 		});
 
-		this.app.workspace.revealLeaf(leaf);
+		void this.app.workspace.revealLeaf(leaf);
 	}
 
 	private async checkForUpdate(): Promise<void> {
@@ -252,7 +252,7 @@ export default class ClaudeCodePlugin extends Plugin {
 		if (!this.vaultMcpServer) return;
 		const adapter = this.app.vault.adapter;
 		const vaultRoot = adapter instanceof FileSystemAdapter ? adapter.getBasePath() : "";
-		this.vaultMcpServer.stop();
+		void this.vaultMcpServer.stop();
 		this.vaultMcpServer = null;
 		this.deregisterMcpFromProjectSettings(vaultRoot);
 		this.getClaudeView()?.updateMcpStatus();
@@ -265,7 +265,7 @@ export default class ClaudeCodePlugin extends Plugin {
 		let config: Record<string, unknown> = {};
 		try {
 			if (fs.existsSync(mcpPath)) {
-				config = JSON.parse(fs.readFileSync(mcpPath, "utf8"));
+				config = JSON.parse(fs.readFileSync(mcpPath, "utf8")) as Record<string, unknown>;
 			}
 		} catch {
 			config = {};
@@ -310,7 +310,7 @@ export default class ClaudeCodePlugin extends Plugin {
 			{},
 			DEFAULT_SETTINGS,
 			await this.loadData()
-		);
+		) as ClaudeCodeSettings;
 	}
 
 	async saveSettings(): Promise<void> {

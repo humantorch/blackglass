@@ -389,7 +389,12 @@ resizePty(proc: ChildProcess, cols: number, rows: number): void {
 				}
 
 				try {
-					const parsed = JSON.parse(stdout.trim());
+					interface ClaudeJsonResponse {
+						result?: string;
+						content?: Array<{ text?: string }>;
+						message?: string;
+					}
+					const parsed = JSON.parse(stdout.trim()) as ClaudeJsonResponse;
 					const text: string =
 						parsed.result ??
 						parsed.content?.[0]?.text ??

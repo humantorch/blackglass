@@ -243,7 +243,7 @@ export class VaultMcpServer {
 		req.on("end", () => {
 			void (async () => {
 				try {
-					const request: JsonRpcRequest = JSON.parse(body);
+					const request = JSON.parse(body) as JsonRpcRequest;
 					const response = await this.handleJsonRpc(request);
 					if (response === null) {
 						// Notification — no response body
