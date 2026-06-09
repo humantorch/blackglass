@@ -15,7 +15,7 @@ export class SettingsTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl("h2", { text: "Claude Code Settings" });
+		new Setting(containerEl).setName("Claude Code Settings").setHeading();
 
 		new Setting(containerEl)
 			.setName("Claude binary path")
@@ -103,7 +103,7 @@ export class SettingsTab extends PluginSettingTab {
 		const weightSetting = new Setting(containerEl)
 			.setName("Terminal font weight")
 			.setDesc("Weight or style variant for the selected font. Loading fonts...");
-		this.buildFontDropdowns(familySetting, weightSetting);
+		void this.buildFontDropdowns(familySetting, weightSetting);
 
 		new Setting(containerEl)
 			.setName("Open Claude panel on startup")
@@ -149,7 +149,7 @@ export class SettingsTab extends PluginSettingTab {
 					})
 			);
 
-		containerEl.createEl("h3", { text: "Vault MCP server" });
+		new Setting(containerEl).setName("Vault MCP server").setHeading();
 
 		new Setting(containerEl)
 			.setName("Enable vault MCP server")
@@ -268,7 +268,7 @@ export class SettingsTab extends PluginSettingTab {
 	}
 
 	private styleToWeight(style: string): string {
-		const s = style.toLowerCase().replace(/[\s\-]/g, "");
+		const s = style.toLowerCase().replace(/[\s-]/g, "");
 		if (s.includes("hairline") || s === "thin") return "100";
 		if (s.includes("extralight") || s.includes("ultralight")) return "200";
 		if (s.includes("light")) return "300";

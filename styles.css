@@ -124,6 +124,7 @@
 
 .claude-code-version--update {
 	color: var(--color-yellow);
+	cursor: pointer;
 }
 
 .claude-code-version--update:hover {

@@ -23,7 +23,7 @@ function buildEnv(): Record<string, string> {
 		// Enumerate Python installs under %LOCALAPPDATA%\Programs\Python\ —
 		// the Python installer's default per-user location, often not on Electron's PATH.
 		try {
-			// eslint-disable-next-line @typescript-eslint/no-var-requires
+			// eslint-disable-next-line @typescript-eslint/no-var-requires -- dynamic require needed for Electron-compatible runtime module loading
 			const fs = require("fs") as typeof import("fs");
 			const pythonBase = localAppData ? `${localAppData}\\Programs\\Python` : "";
 			if (pythonBase && fs.existsSync(pythonBase)) {
@@ -183,7 +183,7 @@ resizePty(proc: ChildProcess, cols: number, rows: number): void {
 		// On Windows, probe the filesystem directly before falling back to PATH lookup.
 		// Electron's inherited PATH is stripped and often misses Python even when installed.
 		if (isWindows) {
-			// eslint-disable-next-line @typescript-eslint/no-var-requires
+			// eslint-disable-next-line @typescript-eslint/no-var-requires -- dynamic require needed for Electron-compatible runtime module loading
 			const fs = require("fs") as typeof import("fs");
 			const localAppData = this.resolvedEnv["LOCALAPPDATA"] || "";
 
@@ -287,7 +287,7 @@ resizePty(proc: ChildProcess, cols: number, rows: number): void {
 		let completed = false;
 
 		const timeoutMs = options.timeoutMs ?? 120000;
-		const timer = setTimeout(() => {
+		const timer = window.setTimeout(() => {
 			if (killed || completed) return;
 			killed = true;
 			proc.kill();
@@ -305,7 +305,7 @@ resizePty(proc: ChildProcess, cols: number, rows: number): void {
 		proc.stderr.on("data", (d: Buffer) => { stderr += d.toString(); });
 
 		proc.on("close", (code: number | null) => {
-			clearTimeout(timer);
+			window.clearTimeout(timer);
 			if (killed || completed) return;
 			completed = true;
 			if (code === 0) {
@@ -316,7 +316,7 @@ resizePty(proc: ChildProcess, cols: number, rows: number): void {
 		});
 
 		proc.on("error", (err: Error) => {
-			clearTimeout(timer);
+			window.clearTimeout(timer);
 			if (killed || completed) return;
 			completed = true;
 			const isEnoent = (err as NodeJS.ErrnoException).code === "ENOENT";
@@ -329,7 +329,7 @@ resizePty(proc: ChildProcess, cols: number, rows: number): void {
 
 		return () => {
 			killed = true;
-			clearTimeout(timer);
+			window.clearTimeout(timer);
 			try { proc.kill(); } catch { /* already dead */ }
 		};
 	}
@@ -370,7 +370,7 @@ resizePty(proc: ChildProcess, cols: number, rows: number): void {
 				stderr += data.toString();
 			});
 
-			const timer = setTimeout(() => {
+			const timer = window.setTimeout(() => {
 				proc.kill();
 				resolve({
 					success: false,
@@ -380,7 +380,7 @@ resizePty(proc: ChildProcess, cols: number, rows: number): void {
 			}, timeoutMs);
 
 			proc.on("close", (code: number | null) => {
-				clearTimeout(timer);
+				window.clearTimeout(timer);
 
 				if (code !== 0) {
 					resolve({
@@ -405,7 +405,7 @@ resizePty(proc: ChildProcess, cols: number, rows: number): void {
 			});
 
 			proc.on("error", (err: Error) => {
-				clearTimeout(timer);
+				window.clearTimeout(timer);
 				const isEnoent = (err as NodeJS.ErrnoException).code === "ENOENT";
 				const isWindows = process.platform === "win32";
 				const hint = isEnoent && isWindows

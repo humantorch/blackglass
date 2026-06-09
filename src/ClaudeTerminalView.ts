@@ -8,7 +8,7 @@ import { CLAUDE_ICON, CLAUDE_TERMINAL_VIEW_TYPE } from "./types";
 
 /** Reads an Obsidian CSS variable from the current theme, falling back to a default. */
 function cssVar(name: string, fallback: string): string {
-	const value = getComputedStyle(document.body).getPropertyValue(name).trim();
+	const value = getComputedStyle(activeDocument.body).getPropertyValue(name).trim();
 	return value || fallback;
 }
 
@@ -20,7 +20,7 @@ function cssVar(name: string, fallback: string): string {
  * Hardcoded values are fallbacks for themes that don't define a given variable.
  */
 function getXtermTheme(): object {
-	const isDark = document.body.classList.contains("theme-dark");
+	const isDark = activeDocument.body.classList.contains("theme-dark");
 	return {
 		background:          cssVar("--background-primary",           isDark ? "#1e1e1e" : "#ffffff"),
 		foreground:          cssVar("--text-normal",                  isDark ? "#d4d4d4" : "#383a42"),
@@ -153,7 +153,7 @@ export class ClaudeTerminalView extends ItemView {
 		this.terminal.open(xtermWrapper);
 
 		// Fit after DOM is rendered
-		setTimeout(() => {
+		window.setTimeout(() => {
 			this.fitAddon?.fit();
 			this.startSession();
 		}, 50);
@@ -172,7 +172,7 @@ export class ClaudeTerminalView extends ItemView {
 		this.themeObserver = new MutationObserver(() => {
 			if (this.terminal) this.terminal.options.theme = getXtermTheme();
 		});
-		this.themeObserver.observe(document.body, { attributeFilter: ["class"] });
+		this.themeObserver.observe(activeDocument.body, { attributeFilter: ["class"] });
 	}
 
 	private setSessionStatus(active: boolean): void {
@@ -241,7 +241,7 @@ export class ClaudeTerminalView extends ItemView {
 			// Force repaint when a TUI (e.g. /mcp dialog) exits the alternate screen.
 			// Without this, xterm.js leaves rendering artifacts from the TUI overlay.
 			if (data.includes("\x1b[?1049l")) {
-				requestAnimationFrame(() => {
+				window.requestAnimationFrame(() => {
 					this.fitAddon?.fit();
 					if (this.pty && this.terminal) {
 						this.plugin.processManager.resizePty(
@@ -325,7 +325,6 @@ export class ClaudeTerminalView extends ItemView {
 		this.versionLabel.setText(`v${version} ↑`);
 		this.versionLabel.addClass("claude-code-version--update");
 		this.versionLabel.title = `Blackglass ${version} is available — click to update`;
-		this.versionLabel.style.cursor = "pointer";
 		this.versionLabel.onclick = () => {
 			const setting = (this.plugin.app as any).setting;
 			setting.open();

@@ -132,8 +132,10 @@ execSync(`git push origin ${tag}`, { cwd: root, stdio: "inherit" });
 
 // GitHub release — attach individual files (Obsidian requires main.js, manifest.json, styles.css as direct assets)
 console.log("\nCreating GitHub release...");
+// main.js and styles.css are uploaded by the GitHub Actions release workflow
+// after it builds and attests them. The script only creates the release shell.
 const url = execSync(
-	`gh release create ${tag} main.js manifest.json styles.css --title "${tag}" ${notesArg}`,
+	`gh release create ${tag} manifest.json --title "${tag}" ${notesArg}`,
 	{ cwd: root }
 ).toString().trim();
 

@@ -24,7 +24,6 @@ export default class ClaudeCodePlugin extends Plugin {
 	async onload(): Promise<void> {
 		await this.loadSettings();
 
-		const vaultRoot = (this.app.vault.adapter as any).getBasePath() as string;
 		this.processManager = new ProcessManager();
 
 		this.contextBuilder = new ContextBuilder(this.app);
@@ -137,7 +136,7 @@ export default class ClaudeCodePlugin extends Plugin {
 		// Auto-open on startup if configured
 		if (this.settings.autoOpenOnStartup) {
 			this.app.workspace.onLayoutReady(() => {
-				this.activateClaudeView();
+				void this.activateClaudeView();
 			});
 		}
 
@@ -147,7 +146,7 @@ export default class ClaudeCodePlugin extends Plugin {
 		}
 
 		// Check for updates once on load, then every 24 hours
-		this.app.workspace.onLayoutReady(() => this.checkForUpdate());
+		this.app.workspace.onLayoutReady(() => { void this.checkForUpdate(); });
 		this.registerInterval(
 			window.setInterval(() => this.checkForUpdate(), 24 * 60 * 60 * 1000)
 		);

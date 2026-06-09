@@ -83,7 +83,7 @@ export class ClaudeQuickModal extends Modal {
 			text: "Stop",
 			cls: "claude-quick-modal-stop-btn",
 		});
-		this.stopBtn.style.display = "none";
+		this.stopBtn.hide();
 		this.stopBtn.addEventListener("click", () => {
 			this.killStream?.();
 			this.killStream = null;
@@ -97,7 +97,7 @@ export class ClaudeQuickModal extends Modal {
 				void this.finalizeResponse(this.streamText);
 			} else {
 				this.finishStreaming();
-				if (this.resultEl) this.resultEl.style.display = "none";
+				this.resultEl?.hide();
 			}
 		});
 
@@ -120,12 +120,12 @@ export class ClaudeQuickModal extends Modal {
 			text: "Copy response",
 			cls: "claude-quick-modal-copy-btn",
 		});
-		this.copyBtn.style.display = "none";
-		this.copyBtn.addEventListener("click", () => this.copyToClipboard());
+		this.copyBtn.hide();
+		this.copyBtn.addEventListener("click", () => { void this.copyToClipboard(); });
 
 		// Result area
 		this.resultEl = contentEl.createDiv({ cls: "claude-quick-modal-result" });
-		this.resultEl.style.display = "none";
+		this.resultEl.hide();
 	}
 
 	private submit(): void {
@@ -145,11 +145,11 @@ export class ClaudeQuickModal extends Modal {
 
 		this.submitBtn.disabled = true;
 		this.submitBtn.textContent = "Asking...";
-		if (this.stopBtn) this.stopBtn.style.display = "inline-block";
-		if (this.copyBtn) this.copyBtn.style.display = "none";
+		this.stopBtn?.show();
+		this.copyBtn?.hide();
 
 		// Show streaming area
-		this.resultEl.style.display = "block";
+		this.resultEl.show();
 		this.resultEl.empty();
 		this.streamEl = this.resultEl.createDiv({ cls: "claude-quick-modal-stream claude-quick-modal-stream--active" });
 
@@ -204,14 +204,14 @@ export class ClaudeQuickModal extends Modal {
 			if (this.streamEl) {
 				this.streamEl.textContent = this.streamText;
 			}
-			this.animationId = requestAnimationFrame(step);
+			this.animationId = window.requestAnimationFrame(step);
 		};
-		this.animationId = requestAnimationFrame(step);
+		this.animationId = window.requestAnimationFrame(step);
 	}
 
 	private finishStreaming(): void {
 		if (this.animationId !== null) {
-			cancelAnimationFrame(this.animationId);
+			window.cancelAnimationFrame(this.animationId);
 			this.animationId = null;
 		}
 		this.charQueue = [];
@@ -220,7 +220,7 @@ export class ClaudeQuickModal extends Modal {
 			this.submitBtn.disabled = false;
 			this.submitBtn.textContent = "Ask Claude";
 		}
-		if (this.stopBtn) this.stopBtn.style.display = "none";
+		this.stopBtn?.hide();
 		this.streamEl = null;
 	}
 
@@ -234,7 +234,7 @@ export class ClaudeQuickModal extends Modal {
 		await MarkdownRenderer.render(this.app, text, responseEl, "", this.markdownComponent);
 		this.resultEl.scrollTo({ top: 0 });
 
-		if (this.copyBtn) this.copyBtn.style.display = "inline-block";
+		this.copyBtn?.show();
 	}
 
 	private async copyToClipboard(): Promise<void> {
@@ -242,7 +242,7 @@ export class ClaudeQuickModal extends Modal {
 		await navigator.clipboard.writeText(this.lastResponse);
 		new Notice("Response copied to clipboard.");
 		if (this.copyBtn) this.copyBtn.textContent = "Copied!";
-		setTimeout(() => {
+		window.setTimeout(() => {
 			if (this.copyBtn) this.copyBtn.textContent = "Copy response";
 		}, 2000);
 	}
@@ -252,7 +252,7 @@ export class ClaudeQuickModal extends Modal {
 		this.killStream?.();
 		this.killStream = null;
 		if (this.animationId !== null) {
-			cancelAnimationFrame(this.animationId);
+			window.cancelAnimationFrame(this.animationId);
 			this.animationId = null;
 		}
 		this.charQueue = [];
