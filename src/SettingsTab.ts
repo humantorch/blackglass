@@ -2,6 +2,19 @@ import { App, DropdownComponent, Notice, PluginSettingTab, Setting } from "obsid
 import type ClaudeCodePlugin from "./main";
 import { QUICK_ASK_MODELS } from "./types";
 
+interface FontData {
+	family: string;
+	style: string;
+	fullName: string;
+	postscriptName: string;
+}
+
+declare global {
+	interface Window {
+		queryLocalFonts?(): Promise<FontData[]>;
+	}
+}
+
 export class SettingsTab extends PluginSettingTab {
 	plugin: ClaudeCodePlugin;
 	private fontVariantMap: Map<string, Array<{ label: string; weight: string }>> = new Map();
@@ -284,15 +297,14 @@ export class SettingsTab extends PluginSettingTab {
 		families: string[];
 		variantMap: Map<string, Array<{ label: string; weight: string }>>;
 	}> {
-		if ("queryLocalFonts" in window) {
+		if (window.queryLocalFonts) {
 			try {
-				const rawFonts = await (window as any).queryLocalFonts();
+				const rawFonts = await window.queryLocalFonts();
 				const familySet = new Set<string>();
 				const variantMap = new Map<string, Array<{ label: string; weight: string }>>();
 
 				for (const font of rawFonts) {
-					const family = font.family as string;
-					const style = font.style as string;
+					const { family, style } = font;
 					familySet.add(family);
 
 					// Skip italic/oblique — not a useful weight choice for a terminal

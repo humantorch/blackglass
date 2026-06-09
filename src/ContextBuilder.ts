@@ -1,4 +1,4 @@
-import { App, Editor } from "obsidian";
+import { App, Editor, FileSystemAdapter } from "obsidian";
 
 export class ContextBuilder {
 	private app: App;
@@ -23,10 +23,9 @@ export class ContextBuilder {
 		const file = this.app.workspace.getActiveFile();
 		if (!file) return null;
 		const adapter = this.app.vault.adapter;
-		if ("getFullPath" in adapter) {
-			return (adapter as any).getFullPath(file.path) as string;
+		if (adapter instanceof FileSystemAdapter) {
+			return adapter.getFullPath(file.path);
 		}
-		// Fallback: relative path
 		return file.path;
 	}
 
@@ -37,8 +36,8 @@ export class ContextBuilder {
 
 	getVaultRoot(): string {
 		const adapter = this.app.vault.adapter;
-		if ("getBasePath" in adapter) {
-			return (adapter as any).getBasePath() as string;
+		if (adapter instanceof FileSystemAdapter) {
+			return adapter.getBasePath();
 		}
 		return "";
 	}

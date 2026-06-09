@@ -1,5 +1,6 @@
 import { execSync, spawn } from "child_process";
 import type { ChildProcess } from "child_process";
+import * as fs from "fs";
 import pseudoterminalScript from "./pseudoterminal.py";
 import winBridgeScript from "./pty_bridge_win.py";
 import { PtySessionOptions, PrintModeOptions, PrintModeResult } from "./types";
@@ -23,8 +24,6 @@ function buildEnv(): Record<string, string> {
 		// Enumerate Python installs under %LOCALAPPDATA%\Programs\Python\ —
 		// the Python installer's default per-user location, often not on Electron's PATH.
 		try {
-			// eslint-disable-next-line @typescript-eslint/no-var-requires -- dynamic require needed for Electron-compatible runtime module loading
-			const fs = require("fs") as typeof import("fs");
 			const pythonBase = localAppData ? `${localAppData}\\Programs\\Python` : "";
 			if (pythonBase && fs.existsSync(pythonBase)) {
 				for (const entry of fs.readdirSync(pythonBase)) {
@@ -183,8 +182,6 @@ resizePty(proc: ChildProcess, cols: number, rows: number): void {
 		// On Windows, probe the filesystem directly before falling back to PATH lookup.
 		// Electron's inherited PATH is stripped and often misses Python even when installed.
 		if (isWindows) {
-			// eslint-disable-next-line @typescript-eslint/no-var-requires -- dynamic require needed for Electron-compatible runtime module loading
-			const fs = require("fs") as typeof import("fs");
 			const localAppData = this.resolvedEnv["LOCALAPPDATA"] || "";
 
 			// Enumerate %LOCALAPPDATA%\Programs\Python\Python3* — the default per-user

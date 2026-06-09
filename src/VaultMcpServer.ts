@@ -240,28 +240,30 @@ export class VaultMcpServer {
 		req.on("data", (chunk: Buffer) => {
 			body += chunk.toString();
 		});
-		req.on("end", async () => {
-			try {
-				const request: JsonRpcRequest = JSON.parse(body);
-				const response = await this.handleJsonRpc(request);
-				if (response === null) {
-					// Notification — no response body
-					res.writeHead(204);
-					res.end();
-				} else {
-					res.writeHead(200, { "Content-Type": "application/json" });
-					res.end(JSON.stringify(response));
+		req.on("end", () => {
+			void (async () => {
+				try {
+					const request: JsonRpcRequest = JSON.parse(body);
+					const response = await this.handleJsonRpc(request);
+					if (response === null) {
+						// Notification — no response body
+						res.writeHead(204);
+						res.end();
+					} else {
+						res.writeHead(200, { "Content-Type": "application/json" });
+						res.end(JSON.stringify(response));
+					}
+				} catch {
+					res.writeHead(400, { "Content-Type": "application/json" });
+					res.end(
+						JSON.stringify({
+							jsonrpc: "2.0",
+							id: null,
+							error: { code: -32700, message: "Parse error" },
+						})
+					);
 				}
-			} catch {
-				res.writeHead(400, { "Content-Type": "application/json" });
-				res.end(
-					JSON.stringify({
-						jsonrpc: "2.0",
-						id: null,
-						error: { code: -32700, message: "Parse error" },
-					})
-				);
-			}
+			})();
 		});
 	}
 

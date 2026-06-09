@@ -1,4 +1,4 @@
-import { Menu, Notice, Plugin, RequestUrlResponse, TFile, WorkspaceLeaf, requestUrl } from "obsidian";
+import { FileSystemAdapter, Menu, Notice, Plugin, RequestUrlResponse, TFile, WorkspaceLeaf, requestUrl } from "obsidian";
 import * as fs from "fs";
 import * as path from "path";
 import {
@@ -13,6 +13,10 @@ import { ProcessManager } from "./ProcessManager";
 import { ClaudeTerminalView } from "./ClaudeTerminalView";
 import { ClaudeQuickModal } from "./ClaudeQuickModal";
 import { VaultMcpServer } from "./VaultMcpServer";
+
+interface GitHubRelease {
+	tag_name: string;
+}
 
 export default class ClaudeCodePlugin extends Plugin {
 	settings: ClaudeCodeSettings = DEFAULT_SETTINGS;
@@ -36,7 +40,7 @@ export default class ClaudeCodePlugin extends Plugin {
 
 		// Ribbon icon
 		this.addRibbonIcon(CLAUDE_ICON, "Open Claude Code", () => {
-			this.activateClaudeView();
+			void this.activateClaudeView();
 		});
 
 		// Settings tab
@@ -46,7 +50,7 @@ export default class ClaudeCodePlugin extends Plugin {
 		this.addCommand({
 			id: "open-terminal",
 			name: "Open Claude Code terminal",
-			callback: () => this.activateClaudeView(),
+			callback: () => { void this.activateClaudeView(); },
 		});
 
 		this.addCommand({
@@ -98,7 +102,7 @@ export default class ClaudeCodePlugin extends Plugin {
 				const view = this.getClaudeView();
 				if (!view) {
 					// Open a fresh terminal instead
-					this.activateClaudeView();
+					void this.activateClaudeView();
 					return;
 				}
 				// ClaudeTerminalView.restartSession is private — close and reopen
@@ -109,7 +113,7 @@ export default class ClaudeCodePlugin extends Plugin {
 				for (const leaf of leaves) {
 					leaf.detach();
 				}
-				this.activateClaudeView();
+				void this.activateClaudeView();
 			},
 		});
 
@@ -148,7 +152,7 @@ export default class ClaudeCodePlugin extends Plugin {
 		// Check for updates once on load, then every 24 hours
 		this.app.workspace.onLayoutReady(() => { void this.checkForUpdate(); });
 		this.registerInterval(
-			window.setInterval(() => this.checkForUpdate(), 24 * 60 * 60 * 1000)
+			window.setInterval(() => { void this.checkForUpdate(); }, 24 * 60 * 60 * 1000)
 		);
 	}
 
@@ -187,7 +191,8 @@ export default class ClaudeCodePlugin extends Plugin {
 				url: "https://api.github.com/repos/humantorch/blackglass/releases/latest",
 				headers: { "User-Agent": "blackglass-obsidian-plugin" },
 			});
-			const latest: string = resp.json?.tag_name?.replace(/^v/, "") ?? "";
+			const data = resp.json as GitHubRelease | null;
+			const latest: string = (data?.tag_name ?? "").replace(/^v/, "");
 			const current = this.manifest.version;
 			if (latest && latest !== current && this.isNewerVersion(latest, current)) {
 				this.availableVersion = latest;
@@ -229,7 +234,8 @@ export default class ClaudeCodePlugin extends Plugin {
 	}
 
 	async startVaultMcpServer(): Promise<void> {
-		const vaultRoot = (this.app.vault.adapter as any).getBasePath() as string;
+		const adapter = this.app.vault.adapter;
+		const vaultRoot = adapter instanceof FileSystemAdapter ? adapter.getBasePath() : "";
 		this.vaultMcpServer = new VaultMcpServer(this.app, this.settings.mcpServerPort, this.settings.mcpReadOnly);
 		try {
 			const port = await this.vaultMcpServer.start();
@@ -244,7 +250,8 @@ export default class ClaudeCodePlugin extends Plugin {
 
 	stopVaultMcpServer(): void {
 		if (!this.vaultMcpServer) return;
-		const vaultRoot = (this.app.vault.adapter as any).getBasePath() as string;
+		const adapter = this.app.vault.adapter;
+		const vaultRoot = adapter instanceof FileSystemAdapter ? adapter.getBasePath() : "";
 		this.vaultMcpServer.stop();
 		this.vaultMcpServer = null;
 		this.deregisterMcpFromProjectSettings(vaultRoot);

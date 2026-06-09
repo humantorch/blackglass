@@ -1,7 +1,9 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
 import { Terminal } from "@xterm/xterm";
+import type { FontWeight } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { shell } from "electron";
 import type { ChildProcess } from "child_process";
 import type ClaudeCodePlugin from "./main";
 import { CLAUDE_ICON, CLAUDE_TERMINAL_VIEW_TYPE } from "./types";
@@ -133,14 +135,12 @@ export class ClaudeTerminalView extends ItemView {
 
 		// Initialize xterm
 		this.fitAddon = new FitAddon();
-		// Use shell.openExternal so Electron doesn't block the link as an unclearable opener.
-		const { shell } = require("electron");
 		const webLinksAddon = new WebLinksAddon((_event, uri) => shell.openExternal(uri));
 
 		this.terminal = new Terminal({
 			fontFamily: this.plugin.settings.fontFamily,
 			fontSize: this.plugin.settings.fontSize,
-			fontWeight: this.plugin.settings.fontWeight as any,
+			fontWeight: this.plugin.settings.fontWeight as FontWeight,
 			theme: getXtermTheme(),
 			cursorBlink: true,
 			allowProposedApi: true,
@@ -326,9 +326,11 @@ export class ClaudeTerminalView extends ItemView {
 		this.versionLabel.addClass("claude-code-version--update");
 		this.versionLabel.title = `Blackglass ${version} is available — click to update`;
 		this.versionLabel.onclick = () => {
-			const setting = (this.plugin.app as any).setting;
-			setting.open();
-			setting.openTabById("community-plugins");
+			const app = this.plugin.app as unknown as {
+				setting: { open(): void; openTabById(id: string): void };
+			};
+			app.setting.open();
+			app.setting.openTabById("community-plugins");
 		};
 	}
 
@@ -349,7 +351,7 @@ export class ClaudeTerminalView extends ItemView {
 		if (!this.terminal) return;
 		this.terminal.options.fontSize = size;
 		this.terminal.options.fontFamily = family;
-		this.terminal.options.fontWeight = weight as any;
+		this.terminal.options.fontWeight = weight as FontWeight;
 		this.fitAddon?.fit();
 	}
 
