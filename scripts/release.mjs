@@ -67,6 +67,16 @@ try {
 	// Tag does not exist — good to proceed
 }
 
+// Compute commit range now (before any changes) for use in README and release notes
+let lastTag = "";
+let commits = "";
+try {
+	lastTag = execSync("git describe --tags --abbrev=0", { cwd: root }).toString().trim();
+	commits = execSync(`git log ${lastTag}..HEAD --format="- %s"`, { cwd: root }).toString().trim();
+} catch {
+	commits = execSync('git log --format="- %s"', { cwd: root }).toString().trim();
+}
+
 // Write version to manifest.json, package.json, and versions.json
 manifest.version = version;
 pkg.version = version;
@@ -79,9 +89,44 @@ writeFileSync(versionsPath, JSON.stringify(versions, null, 2) + "\n");
 console.log("Building...");
 execSync("npm run build", { cwd: root, stdio: "inherit" });
 
-// Commit version bump
+// Update README "What's new" section
+console.log("\nUpdating README What's new section...");
+try {
+	const bulletPrompt =
+		`Write a short bulleted list (3–6 items) summarising what's new in version ${version} of Blackglass, ` +
+		`an Obsidian plugin that embeds Claude Code as an interactive terminal with a built-in vault MCP server.\n\n` +
+		`Each bullet: bold feature name, em dash, one sentence on what users can now do. ` +
+		`Output only the markdown bullet list. No heading, no preamble, no trailing commentary.\n\n` +
+		`Commits since ${lastTag}:\n${commits}`;
+
+	const bulletResult = spawnSync("claude", ["--print"], {
+		input: bulletPrompt,
+		cwd: root,
+		encoding: "utf8",
+	});
+
+	if (bulletResult.status === 0 && bulletResult.stdout.trim()) {
+		let bullets = bulletResult.stdout.trim();
+		// Strip any preamble before the first bullet
+		const firstBullet = bullets.search(/^[-*]/m);
+		if (firstBullet > 0) bullets = bullets.slice(firstBullet);
+		const readmePath = resolve(root, "README.md");
+		let readme = readFileSync(readmePath, "utf8");
+		const newSection =
+			`<!-- WHATS-NEW-START -->\n## What's new in ${version}\n\n${bullets}\n<!-- WHATS-NEW-END -->`;
+		readme = readme.replace(/<!-- WHATS-NEW-START -->[\s\S]*?<!-- WHATS-NEW-END -->/, newSection);
+		writeFileSync(readmePath, readme);
+		console.log("README What's new section updated.");
+	} else {
+		console.warn("claude --print returned no output, skipping README update.");
+	}
+} catch (err) {
+	console.warn(`Could not update README What's new section (${err.message}).`);
+}
+
+// Commit version bump + README update
 console.log("\nCommitting version bump...");
-execSync("git add manifest.json package.json versions.json", { cwd: root });
+execSync("git add manifest.json package.json versions.json README.md", { cwd: root });
 execSync(`git commit -m "Bump version to ${version}"`, { cwd: root, stdio: "inherit" });
 execSync("git push origin main", { cwd: root, stdio: "inherit" });
 
@@ -89,20 +134,14 @@ execSync("git push origin main", { cwd: root, stdio: "inherit" });
 console.log("\nGenerating release notes...");
 let notesArg = "--generate-notes";
 try {
-	const lastTag = execSync("git describe --tags --abbrev=0 HEAD^", { cwd: root })
-		.toString()
-		.trim();
-	const commits = execSync(`git log ${lastTag}..HEAD --format="- %s"`, { cwd: root })
-		.toString()
-		.trim();
-
 	const prompt =
 		`Write release notes for version ${version} of Blackglass, an Obsidian plugin ` +
 		`that embeds Claude Code as an interactive terminal with a built-in vault MCP server.\n\n` +
 		`Format as markdown. Start with "## What's new". Group related changes under ` +
 		`subheadings if there are multiple themes. Be specific and user-focused — describe ` +
 		`what users can now do or what problems are fixed. Keep it concise.\n\n` +
-		`Commits since ${lastTag}:\n${commits}`;
+		`Output only the release notes markdown. Do not include any preamble, commentary, or explanation before the first heading.\n\n` +
+		`Commits since ${lastTag || "the beginning"}:\n${commits}`;
 
 	const result = spawnSync("claude", ["--print"], {
 		input: prompt,
@@ -115,6 +154,9 @@ try {
 		// Strip them so the GitHub release notes render as plain markdown.
 		let notes = result.stdout.trim();
 		notes = notes.replace(/^```[a-z]*\n/, "").replace(/\n```$/, "").trim();
+		// Strip any conversational preamble before the first ## heading
+		const firstHeading = notes.indexOf("## ");
+		if (firstHeading > 0) notes = notes.slice(firstHeading);
 		writeFileSync(notesFile, notes);
 		notesArg = `--notes-file ${notesFile}`;
 		console.log("Release notes generated.");

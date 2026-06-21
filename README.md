@@ -13,6 +13,15 @@ Every slash command, every MCP tool, every session you'd have in a standalone te
 
 ![Blackglass screenshot](assets/blackglass-05.31.png)
 
+<!-- WHATS-NEW-START -->
+## What's new in 1.7.0
+
+- **@ note picker** — toolbar `@` button opens a fuzzy vault search and writes a `@filename` reference into the terminal; also available as a bindable hotkey
+- **Clickable vault links** — `.md` paths in Claude's output are now clickable and open the file directly in Obsidian
+- **Settings shortcut** — toolbar ⚙ button opens Blackglass settings without leaving the plugin
+- **Remote access docs** — documented how to use Blackglass from your phone via Claude Code's `/remote-control` command
+<!-- WHATS-NEW-END -->
+
 ## Features
 
 - **Real Claude Code terminal**: not a chat UI or a wrapper; the actual Claude Code CLI running in a full xterm.js terminal in your sidebar. All slash commands, all MCP tools, full session continuity.
