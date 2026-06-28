@@ -14,12 +14,11 @@ Every slash command, every MCP tool, every session you'd have in a standalone te
 ![Blackglass screenshot](assets/blackglass-05.31.png)
 
 <!-- WHATS-NEW-START -->
-## What's new in 1.7.0
+## What's new in 1.7.1
 
-- **@ note picker** — toolbar `@` button opens a fuzzy vault search and writes a `@filename` reference into the terminal; also available as a bindable hotkey
-- **Clickable vault links** — `.md` paths in Claude's output are now clickable and open the file directly in Obsidian
-- **Settings shortcut** — toolbar ⚙ button opens Blackglass settings without leaving the plugin
-- **Remote access docs** — documented how to use Blackglass from your phone via Claude Code's `/remote-control` command
+- **Clickable wikilinks** — `[[note]]` and `[[note|alias]]` references that appear in terminal output now open the linked note in Obsidian when clicked, not just bare `.md` paths.
+- **Alias wikilinks supported** — piped wikilink syntax (e.g. `[[My Note|alias]]`) is correctly resolved through Obsidian's metadata cache, so aliased links are as clickable as plain ones.
+- **Auto-updating What's New in README** — the README's release notes section is now generated automatically during each release so it always reflects the latest changelog without manual edits.
 <!-- WHATS-NEW-END -->
 
 ## Features
