@@ -199,30 +199,46 @@ export class ClaudeTerminalView extends ItemView {
 		this.terminal.loadAddon(webLinksAddon);
 		this.terminal.open(xtermWrapper);
 
-		// Detect vault-relative .md paths in terminal output and open them in Obsidian on click.
-		// Only paths that resolve to an actual vault file get the link treatment.
+		// Detect vault file references in terminal output and open them in Obsidian on click.
+		// Handles two formats:
+		//   - vault-relative paths ending in .md  (e.g. People/marcus-okafor.md)
+		//   - Obsidian wikilinks                  (e.g. [[api-redesign]] or [[note|alias]])
 		const vaultPathPattern = /\b([\w][\w./ -]*\.md)\b/g;
+		const wikilinkPattern = /\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g;
 		this.terminal.registerLinkProvider({
 			provideLinks: (y: number, callback: (links: ILink[] | undefined) => void) => {
 				const line = this.terminal?.buffer.active.getLine(y - 1);
 				if (!line) { callback(undefined); return; }
 				const text = line.translateToString(true);
 				const links: ILink[] = [];
-				vaultPathPattern.lastIndex = 0;
 				let match: RegExpExecArray | null;
+
+				vaultPathPattern.lastIndex = 0;
 				while ((match = vaultPathPattern.exec(text)) !== null) {
 					const filePath = match[1];
 					if (!(this.plugin.app.vault.getAbstractFileByPath(filePath) instanceof TFile)) continue;
-					const startX = match.index + 1;
-					const endX = match.index + match[0].length;
 					links.push({
-						range: { start: { x: startX, y }, end: { x: endX, y } },
+						range: { start: { x: match.index + 1, y }, end: { x: match.index + match[0].length, y } },
 						text: filePath,
 						activate: (_event: MouseEvent, linkText: string) => {
 							void this.plugin.app.workspace.openLinkText(linkText, "", false);
 						},
 					});
 				}
+
+				wikilinkPattern.lastIndex = 0;
+				while ((match = wikilinkPattern.exec(text)) !== null) {
+					const noteName = match[1].trim();
+					if (!this.plugin.app.metadataCache.getFirstLinkpathDest(noteName, "")) continue;
+					links.push({
+						range: { start: { x: match.index + 1, y }, end: { x: match.index + match[0].length, y } },
+						text: noteName,
+						activate: (_event: MouseEvent, linkText: string) => {
+							void this.plugin.app.workspace.openLinkText(linkText, "", false);
+						},
+					});
+				}
+
 				callback(links.length > 0 ? links : undefined);
 			},
 		});
