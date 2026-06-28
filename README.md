@@ -16,9 +16,12 @@ Every slash command, every MCP tool, every session you'd have in a standalone te
 **Note:** This plugin was formerly called Blackglass. The name has been shortened to Glass; the plugin ID remains `blackglass` so existing installations update seamlessly.
 
 <!-- WHATS-NEW-START -->
-## What's new in 1.8.0
+## What's new in 1.8.1
 
-- **Plugin renamed to Glass** — Shorter, cleaner name. The plugin ID remains `blackglass` so your existing installation updates seamlessly.
+- New commits or changes to include in 1.8.1, or
+- Instructions to highlight 1.8.0's features (the rename to Glass) as context for this patch
+
+What would be most helpful?
 <!-- WHATS-NEW-END -->
 
 ## Features
