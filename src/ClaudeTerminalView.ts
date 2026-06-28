@@ -249,14 +249,21 @@ export class ClaudeTerminalView extends ItemView {
 			this.startSession();
 		}, 50);
 
-		// Resize observer to keep terminal sized to container
+		// Resize observer to keep terminal sized to container.
+		// RAF-debounced so rapid sidebar drags collapse into one reflow per frame
+		// rather than thrashing xterm at every intermediate pixel size.
+		let resizeRaf: number | null = null;
 		this.resizeObserver = new ResizeObserver(() => {
-			this.fitAddon?.fit();
-			if (this.pty && this.terminal) {
-				const cols = this.terminal.cols;
-				const rows = this.terminal.rows;
-				this.plugin.processManager.resizePty(this.pty, cols, rows);
-			}
+			if (resizeRaf !== null) window.cancelAnimationFrame(resizeRaf);
+			resizeRaf = window.requestAnimationFrame(() => {
+				resizeRaf = null;
+				this.fitAddon?.fit();
+				if (this.pty && this.terminal) {
+					const cols = this.terminal.cols;
+					const rows = this.terminal.rows;
+					this.plugin.processManager.resizePty(this.pty, cols, rows);
+				}
+			});
 		});
 		this.resizeObserver.observe(xtermWrapper);
 
@@ -369,6 +376,10 @@ export class ClaudeTerminalView extends ItemView {
 
 			this.pty = null;
 			this.setSessionStatus(false);
+			// Dispose the input handler immediately so the terminal is inert until
+			// a new session starts — prevents stale keystrokes from leaking to Obsidian.
+			this.terminalInputDisposable?.dispose();
+			this.terminalInputDisposable = null;
 
 			const exitCode = code ?? 1;
 
