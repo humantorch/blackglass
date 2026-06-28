@@ -1,7 +1,7 @@
 {
   "id": "blackglass",
   "name": "Blackglass",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "minAppVersion": "1.7.7",
   "description": "Run Claude Code inside your vault with an interactive terminal, quick-ask modal, and a built-in MCP server for structured vault access.",
   "author": "Scott Kosman",

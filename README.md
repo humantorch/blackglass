@@ -14,11 +14,10 @@ Every slash command, every MCP tool, every session you'd have in a standalone te
 ![Blackglass screenshot](assets/blackglass-05.31.png)
 
 <!-- WHATS-NEW-START -->
-## What's new in 1.7.1
+## What's new in 1.7.2
 
-- **Clickable wikilinks** — `[[note]]` and `[[note|alias]]` references that appear in terminal output now open the linked note in Obsidian when clicked, not just bare `.md` paths.
-- **Alias wikilinks supported** — piped wikilink syntax (e.g. `[[My Note|alias]]`) is correctly resolved through Obsidian's metadata cache, so aliased links are as clickable as plain ones.
-- **Auto-updating What's New in README** — the README's release notes section is now generated automatically during each release so it always reflects the latest changelog without manual edits.
+- **Resize Stability** — Terminal windows no longer experience resize thrashing during session operation.
+- **Session Cleanup** — Input handlers are properly disposed when closing a session, preventing resource leaks.
 <!-- WHATS-NEW-END -->
 
 ## Features
