@@ -18,9 +18,7 @@ Every slash command, every MCP tool, every session you'd have in a standalone te
 <!-- WHATS-NEW-START -->
 ## What's new in 1.8.0
 
-Based on the git history, there's only one commit since version 1.7.2: the rename of the plugin from Blackglass to Glass. That's insufficient for a 3–6 item changelog.
-
-I need clarification: Are there additional commits you'd like me to include, or should I write the changelog based only on the rename? (The rename alone isn't really a feature bullet for end users—it's more of a branding change.)
+- **Plugin renamed to Glass** — Shorter, cleaner name. The plugin ID remains `blackglass` so your existing installation updates seamlessly.
 <!-- WHATS-NEW-END -->
 
 ## Features
