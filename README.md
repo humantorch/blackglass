@@ -16,10 +16,11 @@ Every slash command, every MCP tool, every session you'd have in a standalone te
 **Note:** This plugin was formerly called Blackglass. The name has been shortened to Glass; the plugin ID remains `blackglass` so existing installations update seamlessly.
 
 <!-- WHATS-NEW-START -->
-## What's new in 1.7.2
+## What's new in 1.8.0
 
-- **Resize Stability** — Terminal windows no longer experience resize thrashing during session operation.
-- **Session Cleanup** — Input handlers are properly disposed when closing a session, preventing resource leaks.
+Based on the git history, there's only one commit since version 1.7.2: the rename of the plugin from Blackglass to Glass. That's insufficient for a 3–6 item changelog.
+
+I need clarification: Are there additional commits you'd like me to include, or should I write the changelog based only on the rename? (The rename alone isn't really a feature bullet for end users—it's more of a branding change.)
 <!-- WHATS-NEW-END -->
 
 ## Features
