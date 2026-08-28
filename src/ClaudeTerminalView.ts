@@ -227,6 +227,10 @@ export class ClaudeTerminalView extends ItemView {
 			const char = e.key;
 			if (char && char.length === 1 && !e.ctrlKey && !e.metaKey) {
 				e.preventDefault();
+				// Without this, xterm.js's own keydown handler still runs on the same event
+				// afterward and writes the composed character to the pty a second time (and
+				// can misinterpret the replayed event as a cancel/interrupt keystroke).
+				e.stopImmediatePropagation();
 				this.plugin.processManager.writePty(this.pty, char);
 			}
 		};
