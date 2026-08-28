@@ -32,6 +32,10 @@ Every slash command, every MCP tool, every session you'd have in a standalone te
 
 - **Settings search integration** — plugin settings now show up in Obsidian's global settings search on Obsidian 1.13+.
 - **Cleaner settings tab** — removed the redundant "Claude Code" heading that duplicated the plugin name already shown in Obsidian's settings chrome.
+
+## 1.13.3
+
+- **Option-key input on macOS** — fixed a bug where special characters typed with the Option key (e.g. accented letters, symbols) could appear twice in the terminal.
 <!-- WHATS-NEW-END -->
 
 ## Features
