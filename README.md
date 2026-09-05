@@ -18,24 +18,14 @@ Every slash command, every MCP tool, every session you'd have in a standalone te
 **Note:** This plugin was formerly called Blackglass. The name has been shortened to Glass; the plugin ID remains `blackglass` so existing installations update seamlessly.
 
 <!-- WHATS-NEW-START -->
-## What's new in 1.13.0
+## What's new in 1.14.0
 
-- **CLAUDE.md vault context generator** — Glass can generate a CLAUDE.md summarizing your vault's folder structure and tags, which Claude Code loads automatically every session.
-- **First-install onboarding offer** — on a fresh install, Glass offers once to generate this file (skipped if a CLAUDE.md already exists or you dismiss the offer).
-- **On-demand regeneration** — generate or regenerate the file anytime from Settings → Glass → "Generate CLAUDE.md," with a confirmation prompt before replacing an existing one.
-
-## 1.13.1
-
-- **CLAUDE.md backups** — regenerating the vault's CLAUDE.md now backs up the existing file before overwriting it, so prior content isn't lost.
-
-## 1.13.2
-
-- **Settings search integration** — plugin settings now show up in Obsidian's global settings search on Obsidian 1.13+.
-- **Cleaner settings tab** — removed the redundant "Claude Code" heading that duplicated the plugin name already shown in Obsidian's settings chrome.
-
-## 1.13.3
-
-- **Option-key input on macOS** — fixed a bug where special characters typed with the Option key (e.g. accented letters, symbols) could appear twice in the terminal.
+- **Open notes from Claude**: The MCP server now exposes `open_note`, so Claude can reveal any vault note in the editor (optionally in a specific existing pane) without you clicking through the file explorer.
+- **Split panes on request**: `split_pane` opens a note in a new horizontal or vertical split, letting Claude arrange your workspace as it works.
+- **Jump to a heading**: `navigate_to_heading` scrolls an open note directly to a named heading instead of dumping you at the top of the file.
+- **Obsidian notices**: `show_notice` lets Claude surface a native Obsidian toast notification for status updates and prompts.
+- **Pane awareness**: `list_panes` reports the visible editor panes (main editor area only, not sidebars), so Claude knows what you're currently looking at.
+- **Focus stays put**: Opening notes, splitting panes, and navigating to headings all restore your previous keyboard focus, so the terminal doesn't lose your cursor mid-session.
 <!-- WHATS-NEW-END -->
 
 ## Features
