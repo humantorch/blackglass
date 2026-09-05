@@ -13,7 +13,7 @@ Every slash command, every MCP tool, every session you'd have in a standalone te
 
 | Light | Dark |
 | --- | --- |
-| ![Glass screenshot, light mode](assets/glass-7.16.light.png) | ![Glass screenshot, dark mode](assets/glass-7.16.dark.png) |
+| ![Glass screenshot, light mode](assets/glass-1.14.0-light.png) | ![Glass screenshot, dark mode](assets/glass-1.14.0-dark.png) |
 
 **Note:** This plugin was formerly called Blackglass. The name has been shortened to Glass; the plugin ID remains `blackglass` so existing installations update seamlessly.
 
