@@ -1,9 +1,9 @@
 # Glass
 
-[![GitHub release](https://img.shields.io/github/v/release/humantorch/blackglass)](https://github.com/humantorch/blackglass/releases/latest)
+[![GitHub release](https://img.shields.io/github/v/release/humantorch/glass)](https://github.com/humantorch/glass/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-1.7.7%2B-7c3aed)](https://obsidian.md)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)](https://github.com/humantorch/blackglass#requirements)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)](https://github.com/humantorch/glass#requirements)
 [![Python 3](https://img.shields.io/badge/python-3.6%2B-blue)](https://www.python.org/downloads/)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-☕-yellow)](https://buymeacoffee.com/scottkosman)
 
@@ -63,7 +63,7 @@ pip install pywinpty
 
 Search for **Glass** in Settings → Community Plugins → Browse, then install and enable it.
 
-**Manual install:** Download `main.js`, `styles.css`, and `manifest.json` from the [latest release](https://github.com/humantorch/blackglass/releases/latest) and copy them into `<your-vault>/.obsidian/plugins/blackglass/`.
+**Manual install:** Download `main.js`, `styles.css`, and `manifest.json` from the [latest release](https://github.com/humantorch/glass/releases/latest) and copy them into `<your-vault>/.obsidian/plugins/blackglass/`.
 
 ## Commands
 
@@ -94,6 +94,8 @@ Settings → Glass:
 | Terminal font size | `14` | Font size in pixels. Updates the running terminal immediately. |
 | Terminal font family | `monospace` | Font family for the terminal. Populated from your system fonts; falls back to a curated list if font enumeration is unavailable. Updates the running terminal immediately. |
 | Terminal font weight | `Normal` | Weight or style variant for the selected font. Options are derived from your system fonts (e.g. Light, Regular, SemiBold, Bold). Updates the running terminal immediately. |
+| Terminal letter spacing | `0` | Horizontal spacing between characters in pixels. Valid range: 0–3. Updates the running terminal immediately. |
+| Terminal line height | `1.0` | Vertical spacing multiplier for lines. Valid range: 1.0–1.4. Updates the running terminal immediately. |
 | Terminal scrollback | `5000` | Number of lines kept in scroll history. Takes effect on next terminal open. Valid range: 100–100,000. |
 | Open panel on startup | off | Auto-open the terminal when Obsidian launches. |
 | Resume last session | on | Passes `--continue` to resume the previous conversation. |
@@ -192,8 +194,8 @@ Glass gives Claude Code full shell access in the context of your vault's working
 ### Steps
 
 ```bash
-git clone git@github.com:humantorch/blackglass.git
-cd blackglass
+git clone git@github.com:humantorch/glass.git
+cd glass
 npm install
 npm run build   # Produces main.js
 ```
@@ -224,7 +226,7 @@ npm test            # Run tests once
 npm run test:watch  # Re-run on file changes
 ```
 
-Integration tests cover the vault MCP server: auth, all seven tools, read-only mode, port fallback, and HTTP edge cases. Tests spin up a real HTTP server against a mock vault — no Obsidian instance required.
+Integration tests cover the vault MCP server: auth, all fifteen tools, read-only mode, port fallback, and HTTP edge cases. Tests spin up a real HTTP server against a mock vault — no Obsidian instance required.
 
 The PTY terminal, xterm.js rendering, and Obsidian plugin lifecycle are not covered by automated tests; verify those manually in the test vault.
 
@@ -255,14 +257,17 @@ The symlink folder name should match the plugin ID (`blackglass`) so Obsidian ca
 
 ```
 src/
-├── main.ts                # Plugin entry, commands, settings load/save
-├── types.ts               # Shared interfaces and constants
-├── SettingsTab.ts         # Obsidian settings UI
-├── ContextBuilder.ts      # Vault context extraction (file content, selection, paths)
-├── ProcessManager.ts      # Claude subprocess management (PTY + print mode)
-├── ClaudeTerminalView.ts  # xterm.js interactive terminal view
-├── ClaudeQuickModal.ts    # One-shot query modal using --print mode
-└── VaultMcpServer.ts      # Built-in MCP server exposing vault tools to Claude
+├── main.ts                    # Plugin entry, commands, settings load/save
+├── types.ts                   # Shared interfaces and constants
+├── SettingsTab.ts             # Obsidian settings UI
+├── ContextBuilder.ts          # Vault context extraction (file content, selection, paths)
+├── ProcessManager.ts          # Claude subprocess management (PTY + print mode)
+├── ClaudeTerminalView.ts      # xterm.js interactive terminal view
+├── ClaudeQuickModal.ts        # One-shot query modal using --print mode
+├── VaultMcpServer.ts          # Built-in MCP server exposing vault tools to Claude
+├── ClaudeMdGenerator.ts       # Generates the vault-summarizing CLAUDE.md file
+├── ClaudeMdOnboardingModal.ts # First-install offer to generate CLAUDE.md
+└── ConfirmModal.ts            # Reusable yes/no confirmation dialog
 ```
 
 **Dual-mode design:** The terminal view runs a persistent PTY session (full interactive Claude Code). The quick modal uses `claude --print --output-format json` for one-shot queries without needing an open terminal session.
