@@ -1,6 +1,6 @@
 import * as http from "http";
 import * as crypto from "crypto";
-import { App, TFile, TFolder, getAllTags } from "obsidian";
+import { App, TFile, TFolder, getAllTags, MarkdownView, Notice, WorkspaceLeaf } from "obsidian";
 
 interface JsonRpcRequest {
 	jsonrpc: "2.0";
@@ -177,6 +177,98 @@ const TOOL_DEFINITIONS = [
 			},
 		},
 	},
+	{
+		name: "open_note",
+		description:
+			"Open a note in the Obsidian workspace so the user can see it. Reuses the active pane by default.",
+		inputSchema: {
+			type: "object",
+			properties: {
+				path: {
+					type: "string",
+					description: "Vault-relative path to the note to open",
+				},
+				new_leaf: {
+					type: "boolean",
+					description:
+						"Open in a new tab instead of reusing the active pane (default false). Can't be combined with pane_id: there is no way to open a new tab inside a specific other pane, only to replace what that pane is currently showing.",
+				},
+				pane_id: {
+					type: "string",
+					description:
+						"Open the note in this specific existing pane, replacing whatever tab it's currently showing. Get valid ids from list_panes first. Can't be combined with new_leaf.",
+				},
+			},
+			required: ["path"],
+		},
+	},
+	{
+		name: "list_panes",
+		description:
+			"List all panes currently open in the Obsidian workspace, with each pane's id, note title, rough screen position (e.g. 'top-left', 'bottom'), and whether it's the active pane. Use this before open_note with pane_id to target a specific pane, or to answer questions about what's currently open.",
+		inputSchema: {
+			type: "object",
+			properties: {},
+		},
+	},
+	{
+		name: "split_pane",
+		description:
+			"Split the active pane and optionally open a note in the new split. Useful for showing two notes side by side.",
+		inputSchema: {
+			type: "object",
+			properties: {
+				path: {
+					type: "string",
+					description:
+						"Vault-relative path to a note to open in the new split. Omit to just create an empty split.",
+				},
+				direction: {
+					type: "string",
+					enum: ["vertical", "horizontal"],
+					description: "Split direction (default 'vertical')",
+				},
+			},
+		},
+	},
+	{
+		name: "navigate_to_heading",
+		description: "Open a note and scroll the editor to a specific heading within it.",
+		inputSchema: {
+			type: "object",
+			properties: {
+				path: {
+					type: "string",
+					description: "Vault-relative path to the note",
+				},
+				heading: {
+					type: "string",
+					description:
+						"Heading text to jump to (case-insensitive; matched exactly first, then as a substring)",
+				},
+			},
+			required: ["path", "heading"],
+		},
+	},
+	{
+		name: "show_notice",
+		description: "Show a transient notice/toast message in the Obsidian UI, visible to the user.",
+		inputSchema: {
+			type: "object",
+			properties: {
+				message: {
+					type: "string",
+					description: "Message text to display",
+				},
+				duration_ms: {
+					type: "number",
+					description:
+						"How long to show the notice, in milliseconds. Omit or pass 0 to require manual dismissal (default 4000).",
+				},
+			},
+			required: ["message"],
+		},
+	},
 ];
 
 const WRITE_TOOLS = new Set(["create_note", "update_note"]);
@@ -202,6 +294,7 @@ export class VaultMcpServer {
 	private readOnly: boolean;
 	private actualPort: number | null = null;
 	private token: string = "";
+	private paneRegistry = new Map<string, WorkspaceLeaf>();
 
 	constructor(app: App, port: number, readOnly = false) {
 		this.app = app;
@@ -412,6 +505,23 @@ export class VaultMcpServer {
 				return this.getOutlinks(args.path as string);
 			case "list_tags":
 				return this.listTags((args.directory as string) ?? "");
+			case "open_note":
+				return this.openNote(
+					args.path as string,
+					(args.new_leaf as boolean) ?? false,
+					args.pane_id as string | undefined
+				);
+			case "list_panes":
+				return this.listPanes();
+			case "split_pane":
+				return this.splitPane(
+					args.path as string | undefined,
+					(args.direction as string | undefined) ?? "vertical"
+				);
+			case "navigate_to_heading":
+				return this.navigateToHeading(args.path as string, args.heading as string);
+			case "show_notice":
+				return this.showNotice(args.message as string, (args.duration_ms as number | undefined) ?? 4000);
 			default:
 				throw new Error(`Unknown tool: ${name}`);
 		}
@@ -609,5 +719,181 @@ export class VaultMcpServer {
 		);
 		const lines = sorted.map(([tag, count]) => `${tag} (${count})`);
 		return `Found ${sorted.length} tag(s):\n${lines.join("\n")}`;
+	}
+
+	/**
+	 * These tools reveal a pane, which Obsidian focuses as a side effect (its normal
+	 * behavior for a user click). That steals keyboard focus from whatever was focused
+	 * before the tool call, most often the Claude terminal the user is mid-conversation
+	 * in, so we snap focus back afterward.
+	 */
+	private captureFocus(): HTMLElement | null {
+		if (typeof activeDocument === "undefined") return null;
+		return activeDocument.activeElement as HTMLElement | null;
+	}
+
+	private restoreFocus(previouslyFocused: HTMLElement | null): void {
+		if (!previouslyFocused || typeof activeDocument === "undefined") return;
+		if (activeDocument.contains(previouslyFocused)) previouslyFocused.focus();
+	}
+
+	private async openNote(path: string, newLeaf: boolean, paneId: string | undefined): Promise<string> {
+		const file = this.app.vault.getAbstractFileByPath(path);
+		if (!(file instanceof TFile)) throw new Error(`Note not found: ${path}`);
+
+		if (paneId && newLeaf) {
+			throw new Error(
+				"new_leaf can't be combined with pane_id: pane_id always replaces that pane's current tab. " +
+					"Obsidian's plugin API has no way to open a new tab inside a specific other pane. " +
+					"Call open_note again with only one of the two."
+			);
+		}
+
+		const previouslyFocused = this.captureFocus();
+		const leaf = paneId ? this.resolvePane(paneId) : this.app.workspace.getLeaf(newLeaf);
+		await leaf.openFile(file);
+		await this.app.workspace.revealLeaf(leaf);
+		this.restoreFocus(previouslyFocused);
+
+		return paneId ? `Opened note in ${paneId}: ${path}` : `Opened note: ${path}`;
+	}
+
+	private resolvePane(paneId: string): WorkspaceLeaf {
+		const leaf = this.paneRegistry.get(paneId);
+		if (!leaf) throw new Error(`Unknown pane_id: ${paneId}. Call list_panes to get current pane ids.`);
+
+		let stillOpen = false;
+		this.app.workspace.iterateRootLeaves((l) => {
+			if (l === leaf) stillOpen = true;
+		});
+		if (!stillOpen) throw new Error(`Pane ${paneId} is no longer open. Call list_panes again.`);
+
+		return leaf;
+	}
+
+	/**
+	 * Buckets a pane's on-screen rect into a rough label (e.g. "top-left") relative to
+	 * the other open panes' rects, using each rect's center rather than its top-left
+	 * corner so a two-row layout doesn't get misread as "middle".
+	 */
+	private describePosition(rect: DOMRect, allRects: DOMRect[]): string {
+		if (allRects.length <= 1) return "only pane open";
+
+		const overallTop = Math.min(...allRects.map((r) => r.top));
+		const overallBottom = Math.max(...allRects.map((r) => r.bottom));
+		const overallLeft = Math.min(...allRects.map((r) => r.left));
+		const overallRight = Math.max(...allRects.map((r) => r.right));
+
+		const centerY = (rect.top + rect.bottom) / 2;
+		const centerX = (rect.left + rect.right) / 2;
+
+		const parts: string[] = [];
+
+		const verticalSpread = overallBottom - overallTop;
+		if (verticalSpread > 40) {
+			const relY = (centerY - overallTop) / verticalSpread;
+			parts.push(relY < 0.34 ? "top" : relY > 0.66 ? "bottom" : "middle");
+		}
+
+		const horizontalSpread = overallRight - overallLeft;
+		if (horizontalSpread > 40) {
+			const relX = (centerX - overallLeft) / horizontalSpread;
+			parts.push(relX < 0.34 ? "left" : relX > 0.66 ? "right" : "center");
+		}
+
+		return parts.length > 0 ? parts.join("-") : "overlapping with another pane";
+	}
+
+	private listPanes(): string {
+		const allRootLeaves: WorkspaceLeaf[] = [];
+		// A concise-body arrow here would implicitly return Array.push()'s new-length
+		// number, which is truthy from the first call onward, and Obsidian's internal
+		// leaf walker stops early on a truthy callback return — that silently capped
+		// this at one leaf. Use a block body so the callback always returns undefined.
+		this.app.workspace.iterateRootLeaves((leaf) => {
+			allRootLeaves.push(leaf);
+		});
+
+		// Each tab in a tab group is its own leaf, but only the active tab in a group
+		// is actually rendered — a background tab reports a zero-size rect. Without
+		// this filter, background tabs show up as phantom panes with stale titles,
+		// duplicating the slot of the tab actually on screen.
+		const leaves = allRootLeaves.filter((leaf) => {
+			const rect = leaf.view.containerEl.getBoundingClientRect();
+			return rect.width > 0 && rect.height > 0;
+		});
+
+		if (leaves.length === 0) return "No panes are currently open.";
+
+		this.paneRegistry.clear();
+		const activeLeaf = this.app.workspace.getMostRecentLeaf();
+		const rects = leaves.map((leaf) => leaf.view.containerEl.getBoundingClientRect());
+
+		const lines = leaves.map((leaf, i) => {
+			const id = `pane-${i + 1}`;
+			this.paneRegistry.set(id, leaf);
+			const title = leaf.getDisplayText() || "(untitled)";
+			const position = this.describePosition(rects[i], rects);
+			const active = leaf === activeLeaf ? ", active" : "";
+			return `${id}: "${title}" (${position}${active})`;
+		});
+
+		return `Open panes:\n${lines.join("\n")}`;
+	}
+
+	private async splitPane(path: string | undefined, direction: string): Promise<string> {
+		const dir: "vertical" | "horizontal" = direction === "horizontal" ? "horizontal" : "vertical";
+		const dirWord = dir === "horizontal" ? "horizontally" : "vertically";
+
+		const previouslyFocused = this.captureFocus();
+		const leaf = this.app.workspace.getLeaf("split", dir);
+
+		if (path) {
+			const file = this.app.vault.getAbstractFileByPath(path);
+			if (!(file instanceof TFile)) throw new Error(`Note not found: ${path}`);
+			await leaf.openFile(file);
+		}
+		await this.app.workspace.revealLeaf(leaf);
+		this.restoreFocus(previouslyFocused);
+
+		return path ? `Split the pane ${dirWord} and opened: ${path}` : `Split the pane ${dirWord}.`;
+	}
+
+	private async navigateToHeading(path: string, heading: string): Promise<string> {
+		const file = this.app.vault.getAbstractFileByPath(path);
+		if (!(file instanceof TFile)) throw new Error(`Note not found: ${path}`);
+
+		const cache = this.app.metadataCache.getFileCache(file);
+		const headings = cache?.headings ?? [];
+		if (headings.length === 0) throw new Error(`${path} has no headings.`);
+
+		const lower = heading.toLowerCase();
+		const match =
+			headings.find((h) => h.heading.toLowerCase() === lower) ??
+			headings.find((h) => h.heading.toLowerCase().includes(lower));
+		if (!match) {
+			const available = headings.map((h) => h.heading).join(", ");
+			throw new Error(`Heading "${heading}" not found in ${path}. Available headings: ${available}`);
+		}
+
+		const previouslyFocused = this.captureFocus();
+		const leaf = this.app.workspace.getLeaf(false);
+		await leaf.openFile(file);
+		await this.app.workspace.revealLeaf(leaf);
+
+		const view = leaf.view;
+		if (view instanceof MarkdownView) {
+			const line = match.position.start.line;
+			view.editor.setCursor({ line, ch: 0 });
+			view.editor.scrollIntoView({ from: { line, ch: 0 }, to: { line, ch: 0 } }, true);
+		}
+		this.restoreFocus(previouslyFocused);
+
+		return `Navigated to heading "${match.heading}" in ${path}.`;
+	}
+
+	private showNotice(message: string, durationMs: number): string {
+		new Notice(message, durationMs);
+		return `Showed notice: "${message}"`;
 	}
 }

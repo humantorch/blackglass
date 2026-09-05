@@ -28,18 +28,49 @@ vi.mock("obsidian", () => {
 			this.children = children;
 		}
 	}
+	class MarkdownView {
+		file: TFile | null = null;
+		editor = {
+			setCursor: vi.fn(),
+			scrollIntoView: vi.fn(),
+		};
+		containerEl = {
+			getBoundingClientRect: () =>
+				({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0 }) as DOMRect,
+		};
+	}
+	const noticeLog: Array<{ message: string; duration?: number }> = [];
+	class Notice {
+		constructor(message: string, duration?: number) {
+			noticeLog.push({ message, duration });
+		}
+	}
 	return {
 		TFile,
 		TFolder,
+		MarkdownView,
+		Notice,
+		__noticeLog: noticeLog,
 		App: class App {},
 		getAllTags: (cache: { tags?: string[] } | null) => cache?.tags ?? [],
 	};
 });
 
-import { TFile, TFolder } from "obsidian";
+import { TFile, TFolder, MarkdownView } from "obsidian";
+import * as obsidianMock from "obsidian";
+
+const noticeLog = (obsidianMock as unknown as {
+	__noticeLog: Array<{ message: string; duration?: number }>;
+}).__noticeLog;
 
 type MockTFile = InstanceType<typeof TFile>;
 type MockTFolder = InstanceType<typeof TFolder>;
+
+interface MockHeading {
+	heading: string;
+	level: number;
+	position: { start: { line: number } };
+}
 
 function buildMockApp(
 	files: Record<string, string> = {},
@@ -47,6 +78,7 @@ function buildMockApp(
 		resolvedLinks?: Record<string, Record<string, number>>;
 		unresolvedLinks?: Record<string, Record<string, number>>;
 		tags?: Record<string, string[]>;
+		headings?: Record<string, MockHeading[]>;
 	} = {}
 ) {
 	const fileObjects = new Map<string, MockTFile>();
@@ -87,6 +119,56 @@ function buildMockApp(
 	}
 
 	let activeFile: MockTFile | null = null;
+	let lastOpenedPath: string | null = null;
+	const leafCalls: Array<{ arg?: unknown; direction?: unknown }> = [];
+
+	type MockLeaf = {
+		openFile: (file: MockTFile) => Promise<void>;
+		view: InstanceType<typeof MarkdownView>;
+		getDisplayText: () => string;
+		title: string;
+	};
+
+	const openLeaves: MockLeaf[] = [];
+	let mostRecentLeaf: MockLeaf | null = null;
+
+	function createLeaf(initialTitle = "(empty)"): MockLeaf {
+		const view = new MarkdownView();
+		const leaf: MockLeaf = {
+			openFile: async (file: MockTFile) => {
+				lastOpenedPath = file.path;
+				view.file = file as unknown as InstanceType<typeof TFile>;
+				leaf.title = file.path.split("/").pop() ?? file.path;
+			},
+			view,
+			getDisplayText: () => leaf.title,
+			title: initialTitle,
+		};
+		openLeaves.push(leaf);
+		mostRecentLeaf = leaf;
+		return leaf;
+	}
+
+	// Mirrors real DOMRect semantics (width/height derived from the edges) so tests
+	// only need to specify top/left/right/bottom, matching how getBoundingClientRect
+	// actually behaves.
+	function fullRect(partial: Partial<DOMRect>): DOMRect {
+		const top = partial.top ?? 0;
+		const left = partial.left ?? 0;
+		const right = partial.right ?? 0;
+		const bottom = partial.bottom ?? 0;
+		return {
+			top,
+			left,
+			right,
+			bottom,
+			width: partial.width ?? Math.max(0, right - left),
+			height: partial.height ?? Math.max(0, bottom - top),
+			x: partial.x ?? left,
+			y: partial.y ?? top,
+			toJSON: () => ({}),
+		} as DOMRect;
+	}
 
 	const app = {
 		vault: {
@@ -107,13 +189,26 @@ function buildMockApp(
 		},
 		workspace: {
 			getActiveFile: () => activeFile,
+			getLeaf: (arg?: unknown, direction?: unknown) => {
+				leafCalls.push({ arg, direction });
+				return createLeaf();
+			},
+			revealLeaf: async (leaf: MockLeaf) => {
+				mostRecentLeaf = leaf;
+			},
+			iterateRootLeaves: (cb: (leaf: MockLeaf) => void) => {
+				openLeaves.forEach(cb);
+			},
+			getMostRecentLeaf: () => mostRecentLeaf,
 		},
 		metadataCache: {
 			resolvedLinks: graph.resolvedLinks ?? {},
 			unresolvedLinks: graph.unresolvedLinks ?? {},
 			getFileCache: (file: MockTFile) => {
 				const tags = graph.tags?.[file.path];
-				return tags ? { tags } : null;
+				const headings = graph.headings?.[file.path];
+				if (!tags && !headings) return null;
+				return { tags, headings };
 			},
 		},
 	};
@@ -125,6 +220,22 @@ function buildMockApp(
 		},
 		getContent: (path: string) => contentMap.get(path),
 		hasFile: (path: string) => fileObjects.has(path),
+		getLastOpenedPath: () => lastOpenedPath,
+		getLeafCalls: () => leafCalls,
+		getEditorSpies: () => mostRecentLeaf?.view.editor,
+		openPane: (title: string, rect: Partial<DOMRect> = {}) => {
+			const leaf = createLeaf(title);
+			leaf.view.containerEl.getBoundingClientRect = () => fullRect(rect);
+			return leaf;
+		},
+		closePane: (leaf: MockLeaf) => {
+			const idx = openLeaves.indexOf(leaf);
+			if (idx >= 0) openLeaves.splice(idx, 1);
+			if (mostRecentLeaf === leaf) mostRecentLeaf = openLeaves.at(-1) ?? null;
+		},
+		setActivePane: (leaf: MockLeaf) => {
+			mostRecentLeaf = leaf;
+		},
 	};
 }
 
@@ -143,6 +254,10 @@ async function rpc(
 		headers: {
 			"Content-Type": "application/json",
 			Authorization: `Bearer ${token}`,
+			// Without this, Node's fetch (undici) may pool and later try to reuse a
+			// keep-alive socket from a server that a previous test already closed,
+			// which surfaces as a spurious ECONNRESET on an unrelated later test.
+			Connection: "close",
 		},
 		body: JSON.stringify({ jsonrpc: "2.0", id, method, params }),
 	});
@@ -176,6 +291,13 @@ const FIXTURE_TAGS: Record<string, string[]> = {
 	"Projects/blackglass.md": ["#project"],
 };
 
+const FIXTURE_HEADINGS: Record<string, MockHeading[]> = {
+	"Projects/blackglass.md": [
+		{ heading: "Blackglass", level: 1, position: { start: { line: 0 } } },
+		{ heading: "Roadmap", level: 2, position: { start: { line: 4 } } },
+	],
+};
+
 describe("VaultMcpServer", () => {
 	let server: VaultMcpServer;
 	let mock: MockApp;
@@ -187,6 +309,7 @@ describe("VaultMcpServer", () => {
 			resolvedLinks: FIXTURE_RESOLVED_LINKS,
 			unresolvedLinks: FIXTURE_UNRESOLVED_LINKS,
 			tags: FIXTURE_TAGS,
+			headings: FIXTURE_HEADINGS,
 		});
 		server = new VaultMcpServer(mock.app as any, TEST_PORT);
 		port = await server.start();
@@ -291,6 +414,11 @@ describe("VaultMcpServer", () => {
 			expect(names).toContain("get_backlinks");
 			expect(names).toContain("get_outlinks");
 			expect(names).toContain("list_tags");
+			expect(names).toContain("open_note");
+			expect(names).toContain("split_pane");
+			expect(names).toContain("navigate_to_heading");
+			expect(names).toContain("show_notice");
+			expect(names).toContain("list_panes");
 		});
 
 		it("omits write tools in read-only mode", async () => {
@@ -697,6 +825,263 @@ describe("VaultMcpServer", () => {
 				arguments: { directory: "EmptyOrMissing" },
 			});
 			expect(body.result.isError).toBe(true);
+		});
+	});
+
+	// -------------------------------------------------------------------------
+	// open_note
+	// -------------------------------------------------------------------------
+
+	describe("open_note", () => {
+		it("opens a note in the active pane by default", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "open_note",
+				arguments: { path: "inbox.md" },
+			});
+			expect(body.result.isError).toBe(false);
+			expect(body.result.content[0].text).toContain("Opened note: inbox.md");
+			expect(mock.getLastOpenedPath()).toBe("inbox.md");
+			expect(mock.getLeafCalls().at(-1)?.arg).toBe(false);
+		});
+
+		it("opens in a new tab when new_leaf is true", async () => {
+			await rpc(port, token, "tools/call", {
+				name: "open_note",
+				arguments: { path: "inbox.md", new_leaf: true },
+			});
+			expect(mock.getLeafCalls().at(-1)?.arg).toBe(true);
+		});
+
+		it("rejects combining new_leaf with pane_id rather than silently ignoring new_leaf", async () => {
+			mock.openPane("Existing.md", { top: 0, bottom: 600, left: 0, right: 800 });
+			await rpc(port, token, "tools/call", { name: "list_panes", arguments: {} });
+
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "open_note",
+				arguments: { path: "inbox.md", pane_id: "pane-1", new_leaf: true },
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain("can't be combined with pane_id");
+		});
+
+		it("returns an error for a missing note", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "open_note",
+				arguments: { path: "ghost.md" },
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain("Note not found");
+		});
+
+		it("targets a specific pane by pane_id from list_panes", async () => {
+			mock.openPane("First.md", { top: 0, bottom: 300, left: 0, right: 400 });
+			mock.openPane("Second.md", { top: 0, bottom: 300, left: 400, right: 800 });
+			await rpc(port, token, "tools/call", { name: "list_panes", arguments: {} });
+
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "open_note",
+				arguments: { path: "inbox.md", pane_id: "pane-2" },
+			});
+			expect(body.result.isError).toBe(false);
+			expect(body.result.content[0].text).toBe("Opened note in pane-2: inbox.md");
+
+			const { body: relisted } = await rpc(port, token, "tools/call", {
+				name: "list_panes",
+				arguments: {},
+			});
+			const text: string = relisted.result.content[0].text;
+			expect(text).toContain('pane-1: "First.md"');
+			expect(text).toContain('pane-2: "inbox.md"');
+		});
+
+		it("returns an error for an unknown pane_id", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "open_note",
+				arguments: { path: "inbox.md", pane_id: "pane-99" },
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain("Unknown pane_id: pane-99");
+		});
+
+		it("returns an error when the targeted pane has since closed", async () => {
+			const leaf = mock.openPane("First.md", { top: 0, bottom: 600, left: 0, right: 800 });
+			await rpc(port, token, "tools/call", { name: "list_panes", arguments: {} });
+			mock.closePane(leaf);
+
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "open_note",
+				arguments: { path: "inbox.md", pane_id: "pane-1" },
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain("no longer open");
+		});
+	});
+
+	// -------------------------------------------------------------------------
+	// list_panes
+	// -------------------------------------------------------------------------
+
+	describe("list_panes", () => {
+		it("reports no panes when none are open", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "list_panes",
+				arguments: {},
+			});
+			expect(body.result.content[0].text).toBe("No panes are currently open.");
+		});
+
+		it("labels a single open pane without a position guess", async () => {
+			mock.openPane("Solo.md", { top: 0, bottom: 600, left: 0, right: 800 });
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "list_panes",
+				arguments: {},
+			});
+			expect(body.result.content[0].text).toContain('pane-1: "Solo.md" (only pane open, active)');
+		});
+
+		it("labels panes by rough screen position and flags the active one", async () => {
+			mock.openPane("TopLeft.md", { top: 0, bottom: 300, left: 0, right: 400 });
+			mock.openPane("TopRight.md", { top: 0, bottom: 300, left: 400, right: 800 });
+			const bottom = mock.openPane("Bottom.md", { top: 300, bottom: 600, left: 0, right: 800 });
+			mock.setActivePane(bottom);
+
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "list_panes",
+				arguments: {},
+			});
+			const text: string = body.result.content[0].text;
+			expect(text).toContain('pane-1: "TopLeft.md" (top-left)');
+			expect(text).toContain('pane-2: "TopRight.md" (top-right)');
+			expect(text).toContain('pane-3: "Bottom.md" (bottom-center, active)');
+		});
+
+		it("excludes background tabs that share a group with a visible tab", async () => {
+			// A background tab isn't actually rendered, so it reports a zero-size rect —
+			// this is how open_note's "deep-work-notes" showed up as a stale phantom pane
+			// in the same slot as the tab actually on screen.
+			mock.openPane("BackgroundTab.md", { top: 0, bottom: 0, left: 0, right: 0 });
+			mock.openPane("VisibleTab.md", { top: 0, bottom: 600, left: 0, right: 800 });
+
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "list_panes",
+				arguments: {},
+			});
+			const text: string = body.result.content[0].text;
+			expect(text).not.toContain("BackgroundTab.md");
+			expect(text).toContain('pane-1: "VisibleTab.md"');
+		});
+	});
+
+	// -------------------------------------------------------------------------
+	// split_pane
+	// -------------------------------------------------------------------------
+
+	describe("split_pane", () => {
+		it("splits the pane vertically by default with no note", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "split_pane",
+				arguments: {},
+			});
+			expect(body.result.isError).toBe(false);
+			expect(body.result.content[0].text).toBe("Split the pane vertically.");
+			expect(mock.getLeafCalls().at(-1)).toEqual({ arg: "split", direction: "vertical" });
+		});
+
+		it("splits horizontally and opens a note when given", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "split_pane",
+				arguments: { path: "inbox.md", direction: "horizontal" },
+			});
+			expect(body.result.content[0].text).toContain("Split the pane horizontally and opened: inbox.md");
+			expect(mock.getLastOpenedPath()).toBe("inbox.md");
+			expect(mock.getLeafCalls().at(-1)).toEqual({ arg: "split", direction: "horizontal" });
+		});
+
+		it("returns an error for a missing note", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "split_pane",
+				arguments: { path: "ghost.md" },
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain("Note not found");
+		});
+	});
+
+	// -------------------------------------------------------------------------
+	// navigate_to_heading
+	// -------------------------------------------------------------------------
+
+	describe("navigate_to_heading", () => {
+		it("jumps to an exact heading match", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "navigate_to_heading",
+				arguments: { path: "Projects/blackglass.md", heading: "Roadmap" },
+			});
+			expect(body.result.isError).toBe(false);
+			expect(body.result.content[0].text).toContain('Navigated to heading "Roadmap"');
+			expect(mock.getEditorSpies()?.setCursor).toHaveBeenCalledWith({ line: 4, ch: 0 });
+			expect(mock.getEditorSpies()?.scrollIntoView).toHaveBeenCalled();
+		});
+
+		it("falls back to a substring match, case-insensitively", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "navigate_to_heading",
+				arguments: { path: "Projects/blackglass.md", heading: "black" },
+			});
+			expect(body.result.content[0].text).toContain('Navigated to heading "Blackglass"');
+		});
+
+		it("errors with available headings when no match is found", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "navigate_to_heading",
+				arguments: { path: "Projects/blackglass.md", heading: "Nonexistent" },
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain("Available headings: Blackglass, Roadmap");
+		});
+
+		it("errors for a note with no headings", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "navigate_to_heading",
+				arguments: { path: "inbox.md", heading: "Anything" },
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain("has no headings");
+		});
+
+		it("returns an error for a missing note", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "navigate_to_heading",
+				arguments: { path: "ghost.md", heading: "Anything" },
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain("Note not found");
+		});
+	});
+
+	// -------------------------------------------------------------------------
+	// show_notice
+	// -------------------------------------------------------------------------
+
+	describe("show_notice", () => {
+		it("shows a notice with the default duration", async () => {
+			noticeLog.length = 0;
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "show_notice",
+				arguments: { message: "Hello from Claude" },
+			});
+			expect(body.result.isError).toBe(false);
+			expect(body.result.content[0].text).toContain('Showed notice: "Hello from Claude"');
+			expect(noticeLog).toEqual([{ message: "Hello from Claude", duration: 4000 }]);
+		});
+
+		it("respects a custom duration", async () => {
+			noticeLog.length = 0;
+			await rpc(port, token, "tools/call", {
+				name: "show_notice",
+				arguments: { message: "Persistent", duration_ms: 0 },
+			});
+			expect(noticeLog).toEqual([{ message: "Persistent", duration: 0 }]);
 		});
 	});
 

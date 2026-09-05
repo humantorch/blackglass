@@ -136,8 +136,15 @@ Claude Code gains the following vault tools:
 | `get_active_note` | Get the path and content of the currently open note |
 | `create_note` | Create a new note at a vault-relative path |
 | `update_note` | Replace the content of an existing note |
+| `open_note` | Open a note in the workspace so you can see it, optionally in a new tab or a specific existing pane |
+| `split_pane` | Split the active pane, optionally opening a note in the new split |
+| `navigate_to_heading` | Open a note and scroll the editor to a specific heading |
+| `show_notice` | Show a transient notice/toast message in the Obsidian UI |
+| `list_panes` | List open panes in the main editor area (not sidebars), with each pane's id, note title, rough screen position, and whether it's active |
 
 `search_note_content` accepts an optional `directory` argument to limit the search to a subtree, and an optional `max_results` argument (default 10, max 50). Each result includes up to 3 matching lines with surrounding context so Claude can decide which notes to read in full.
+
+`open_note` accepts an optional `pane_id` (from `list_panes`) to target a specific existing pane instead of just the active pane or a new tab — handy for multi-pane layouts where "put this in the top pane" needs to resolve to an actual pane. `pane_id` always replaces that pane's current tab; it can't be combined with `new_leaf`, since Obsidian's plugin API has no way to open a new tab inside a specific *other* pane, only to open a new tab in the active one.
 
 To disable the MCP server, toggle it off in Settings - Glass - "Enable vault MCP server". To use a different port, change the "MCP server port" setting (valid range: 1024-65535). To prevent Claude from writing to your vault, enable "Read-only vault access"; this hides `create_note` and `update_note` from Claude entirely.
 
