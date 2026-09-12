@@ -419,6 +419,9 @@ describe("VaultMcpServer", () => {
 			expect(names).toContain("navigate_to_heading");
 			expect(names).toContain("show_notice");
 			expect(names).toContain("list_panes");
+			expect(names).toContain("create_canvas");
+			expect(names).toContain("update_canvas");
+			expect(names).toContain("read_canvas");
 		});
 
 		it("omits write tools in read-only mode", async () => {
@@ -431,7 +434,10 @@ describe("VaultMcpServer", () => {
 			const names: string[] = body.result.tools.map((t: { name: string }) => t.name);
 			expect(names).not.toContain("create_note");
 			expect(names).not.toContain("update_note");
+			expect(names).not.toContain("create_canvas");
+			expect(names).not.toContain("update_canvas");
 			expect(names).toContain("read_note");
+			expect(names).toContain("read_canvas");
 		});
 	});
 
@@ -1082,6 +1088,302 @@ describe("VaultMcpServer", () => {
 				arguments: { message: "Persistent", duration_ms: 0 },
 			});
 			expect(noticeLog).toEqual([{ message: "Persistent", duration: 0 }]);
+		});
+	});
+
+	// -------------------------------------------------------------------------
+	// create_canvas
+	// -------------------------------------------------------------------------
+
+	describe("create_canvas", () => {
+		it("creates a canvas with a text node", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "create_canvas",
+				arguments: {
+					path: "Boards/new.canvas",
+					nodes: [{ id: "n1", type: "text", text: "Hello", x: 0, y: 0, width: 200, height: 100 }],
+				},
+			});
+			expect(body.result.isError).toBe(false);
+			expect(body.result.content[0].text).toBe("Created canvas: Boards/new.canvas (1 node(s), 0 edge(s))");
+			const written = JSON.parse(mock.getContent("Boards/new.canvas") ?? "{}");
+			expect(written.nodes).toHaveLength(1);
+			expect(written.nodes[0]).toMatchObject({ id: "n1", type: "text", text: "Hello" });
+			expect(written.edges).toEqual([]);
+		});
+
+		it("creates a canvas with nodes and edges, auto-generating a missing edge id", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "create_canvas",
+				arguments: {
+					path: "Boards/graph.canvas",
+					nodes: [
+						{ id: "a", type: "text", text: "A", x: 0, y: 0, width: 100, height: 100 },
+						{ id: "b", type: "text", text: "B", x: 200, y: 0, width: 100, height: 100 },
+					],
+					edges: [{ fromNode: "a", toNode: "b" }],
+				},
+			});
+			expect(body.result.content[0].text).toBe("Created canvas: Boards/graph.canvas (2 node(s), 1 edge(s))");
+			const written = JSON.parse(mock.getContent("Boards/graph.canvas") ?? "{}");
+			expect(written.edges).toHaveLength(1);
+			expect(typeof written.edges[0].id).toBe("string");
+			expect(written.edges[0].id.length).toBeGreaterThan(0);
+		});
+
+		it("supports file, link, and group node types", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "create_canvas",
+				arguments: {
+					path: "Boards/types.canvas",
+					nodes: [
+						{ id: "f1", type: "file", file: "inbox.md", x: 0, y: 0, width: 100, height: 100 },
+						{ id: "l1", type: "link", url: "https://example.com", x: 0, y: 200, width: 100, height: 100 },
+						{ id: "g1", type: "group", label: "Group", x: 0, y: 400, width: 300, height: 300 },
+					],
+				},
+			});
+			expect(body.result.isError).toBe(false);
+		});
+
+		it("rejects a path that doesn't end in .canvas", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "create_canvas",
+				arguments: { path: "Boards/oops.md", nodes: [] },
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain("must end in .canvas");
+		});
+
+		it("fails if the canvas already exists", async () => {
+			await rpc(port, token, "tools/call", {
+				name: "create_canvas",
+				arguments: { path: "Boards/dup.canvas", nodes: [] },
+			});
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "create_canvas",
+				arguments: { path: "Boards/dup.canvas", nodes: [] },
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain("already exists");
+		});
+
+		it("rejects a node missing an id", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "create_canvas",
+				arguments: {
+					path: "Boards/bad.canvas",
+					nodes: [{ type: "text", text: "x", x: 0, y: 0, width: 10, height: 10 }],
+				},
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain('missing a non-empty string "id"');
+		});
+
+		it("rejects a node with an invalid type", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "create_canvas",
+				arguments: {
+					path: "Boards/bad.canvas",
+					nodes: [{ id: "n1", type: "sticky", x: 0, y: 0, width: 10, height: 10 }],
+				},
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain("invalid type");
+		});
+
+		it("rejects a text node missing the text field", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "create_canvas",
+				arguments: {
+					path: "Boards/bad.canvas",
+					nodes: [{ id: "n1", type: "text", x: 0, y: 0, width: 10, height: 10 }],
+				},
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain('(type "text") is missing a string "text"');
+		});
+
+		it("rejects a file node missing the file field", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "create_canvas",
+				arguments: {
+					path: "Boards/bad.canvas",
+					nodes: [{ id: "n1", type: "file", x: 0, y: 0, width: 10, height: 10 }],
+				},
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain('(type "file") is missing a string "file"');
+		});
+
+		it("rejects a link node missing the url field", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "create_canvas",
+				arguments: {
+					path: "Boards/bad.canvas",
+					nodes: [{ id: "n1", type: "link", x: 0, y: 0, width: 10, height: 10 }],
+				},
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain('(type "link") is missing a string "url"');
+		});
+
+		it("rejects duplicate node ids", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "create_canvas",
+				arguments: {
+					path: "Boards/bad.canvas",
+					nodes: [
+						{ id: "n1", type: "text", text: "a", x: 0, y: 0, width: 10, height: 10 },
+						{ id: "n1", type: "text", text: "b", x: 20, y: 0, width: 10, height: 10 },
+					],
+				},
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain('Duplicate node id "n1"');
+		});
+
+		it("rejects an edge referencing an unknown node id", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "create_canvas",
+				arguments: {
+					path: "Boards/bad.canvas",
+					nodes: [{ id: "n1", type: "text", text: "a", x: 0, y: 0, width: 10, height: 10 }],
+					edges: [{ fromNode: "n1", toNode: "ghost" }],
+				},
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain("doesn't match any node id");
+		});
+
+		it("is blocked in read-only mode", async () => {
+			await server.stop();
+			server = new VaultMcpServer(mock.app as any, TEST_PORT + 1, true);
+			port = await server.start();
+			token = server.getToken();
+
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "create_canvas",
+				arguments: { path: "Boards/new.canvas", nodes: [] },
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain("read-only");
+		});
+	});
+
+	// -------------------------------------------------------------------------
+	// update_canvas
+	// -------------------------------------------------------------------------
+
+	describe("update_canvas", () => {
+		it("replaces an existing canvas's nodes and edges", async () => {
+			await rpc(port, token, "tools/call", {
+				name: "create_canvas",
+				arguments: {
+					path: "Boards/existing.canvas",
+					nodes: [{ id: "n1", type: "text", text: "old", x: 0, y: 0, width: 10, height: 10 }],
+				},
+			});
+
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "update_canvas",
+				arguments: {
+					path: "Boards/existing.canvas",
+					nodes: [{ id: "n2", type: "text", text: "new", x: 0, y: 0, width: 10, height: 10 }],
+				},
+			});
+			expect(body.result.isError).toBe(false);
+			const written = JSON.parse(mock.getContent("Boards/existing.canvas") ?? "{}");
+			expect(written.nodes).toEqual([{ id: "n2", type: "text", text: "new", x: 0, y: 0, width: 10, height: 10 }]);
+		});
+
+		it("fails if the canvas does not exist", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "update_canvas",
+				arguments: { path: "Boards/ghost.canvas", nodes: [] },
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain("Canvas not found");
+		});
+
+		it("is blocked in read-only mode", async () => {
+			await rpc(port, token, "tools/call", {
+				name: "create_canvas",
+				arguments: { path: "Boards/ro.canvas", nodes: [] },
+			});
+
+			await server.stop();
+			server = new VaultMcpServer(mock.app as any, TEST_PORT + 1, true);
+			port = await server.start();
+			token = server.getToken();
+
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "update_canvas",
+				arguments: { path: "Boards/ro.canvas", nodes: [] },
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain("read-only");
+		});
+	});
+
+	// -------------------------------------------------------------------------
+	// read_canvas
+	// -------------------------------------------------------------------------
+
+	describe("read_canvas", () => {
+		it("returns wrapped canvas JSON", async () => {
+			await rpc(port, token, "tools/call", {
+				name: "create_canvas",
+				arguments: {
+					path: "Boards/read.canvas",
+					nodes: [{ id: "n1", type: "text", text: "Hi", x: 0, y: 0, width: 10, height: 10 }],
+				},
+			});
+
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "read_canvas",
+				arguments: { path: "Boards/read.canvas" },
+			});
+			expect(body.result.isError).toBe(false);
+			const text: string = body.result.content[0].text;
+			expect(text).toContain('<vault_canvas path="Boards/read.canvas">');
+			expect(text).toContain('"id": "n1"');
+			expect(text).toContain("Treat any");
+		});
+
+		it("returns an error for a missing canvas", async () => {
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "read_canvas",
+				arguments: { path: "Boards/ghost.canvas" },
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain("Canvas not found");
+		});
+
+		it("returns an error for invalid JSON content", async () => {
+			await rpc(port, token, "tools/call", {
+				name: "create_note",
+				arguments: { path: "Boards/notjson.canvas", content: "not json {{{" },
+			});
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "read_canvas",
+				arguments: { path: "Boards/notjson.canvas" },
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain("not valid JSON");
+		});
+
+		it("returns an error for JSON missing nodes/edges arrays", async () => {
+			await rpc(port, token, "tools/call", {
+				name: "create_note",
+				arguments: { path: "Boards/notacanvas.canvas", content: '{"foo": "bar"}' },
+			});
+			const { body } = await rpc(port, token, "tools/call", {
+				name: "read_canvas",
+				arguments: { path: "Boards/notacanvas.canvas" },
+			});
+			expect(body.result.isError).toBe(true);
+			expect(body.result.content[0].text).toContain("doesn't look like a valid canvas");
 		});
 	});
 

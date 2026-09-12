@@ -101,7 +101,7 @@ Settings → Glass:
 | Resume last session | on | Passes `--continue` to resume the previous conversation. |
 | Enable vault MCP server | on | Starts the built-in MCP server. Disable to run without vault tool access. |
 | MCP server port | `27123` | Port the MCP server binds to. Increments automatically if the port is in use. Valid range: 1024-65535. |
-| Read-only vault access | off | Hides `create_note` and `update_note` from Claude. Claude can still read and search notes. |
+| Read-only vault access | off | Hides `create_note`, `update_note`, `create_canvas`, and `update_canvas` from Claude. Claude can still read and search notes and canvases. |
 | Skip permission prompts | off | Passes `--dangerously-skip-permissions` to Claude Code. Claude will execute tool calls without asking for confirmation. Only enable for trusted tasks. |
 
 ## Vault MCP server
@@ -133,12 +133,17 @@ Claude Code gains the following vault tools:
 | `navigate_to_heading` | Open a note and scroll the editor to a specific heading |
 | `show_notice` | Show a transient notice/toast message in the Obsidian UI |
 | `list_panes` | List open panes in the main editor area (not sidebars), with each pane's id, note title, rough screen position, and whether it's active |
+| `create_canvas` | Create a new Obsidian Canvas file (a spatial board of cards connected by arrows) |
+| `update_canvas` | Replace the entire nodes/edges structure of an existing canvas |
+| `read_canvas` | Read an existing canvas's full JSON structure |
 
 `search_note_content` accepts an optional `directory` argument to limit the search to a subtree, and an optional `max_results` argument (default 10, max 50). Each result includes up to 3 matching lines with surrounding context so Claude can decide which notes to read in full.
 
 `open_note` accepts an optional `pane_id` (from `list_panes`) to target a specific existing pane instead of just the active pane or a new tab — handy for multi-pane layouts where "put this in the top pane" needs to resolve to an actual pane. `pane_id` always replaces that pane's current tab; it can't be combined with `new_leaf`, since Obsidian's plugin API has no way to open a new tab inside a specific *other* pane, only to open a new tab in the active one.
 
-To disable the MCP server, toggle it off in Settings - Glass - "Enable vault MCP server". To use a different port, change the "MCP server port" setting (valid range: 1024-65535). To prevent Claude from writing to your vault, enable "Read-only vault access"; this hides `create_note` and `update_note` from Claude entirely.
+`create_canvas` and `update_canvas` take a `nodes` array and an optional `edges` array following [Obsidian's JSON Canvas format](https://jsoncanvas.org/spec/1.0/): each node is a card with a unique `id`, a `type` (`text`, `file`, `link`, or `group`), position (`x`/`y`), and size (`width`/`height`), plus a type-specific field (`text`, `file`, or `url`); each edge connects two node ids with `fromNode`/`toNode`. Both validate their input and fail with a specific error (missing field, unknown type, duplicate id, an edge pointing at a node that doesn't exist) rather than writing a malformed canvas.
+
+To disable the MCP server, toggle it off in Settings - Glass - "Enable vault MCP server". To use a different port, change the "MCP server port" setting (valid range: 1024-65535). To hide the vault-writing MCP tools (`create_note`, `update_note`, `create_canvas`, `update_canvas`) from Claude, enable "Read-only vault access" — see [Security](#security) for why this doesn't actually prevent Claude from writing to your vault if it's asked to.
 
 **Note:** `.mcp.json` in the vault root is managed by Glass. If you already have a `.mcp.json` with other servers, Glass will merge its `mcpServers.obsidian` entry rather than overwriting the whole file.
 
@@ -172,11 +177,11 @@ The Claude Code CLI that Glass runs is a separate process that sends your prompt
 
 ## Security
 
-Glass gives Claude Code full shell access in the context of your vault's working directory. This means a note containing adversarial instructions (prompt injection) could (if read into Claude's context via `read_note`, `get_active_note`, or the quick ask commands) attempt to influence Claude's behaviour, including running shell commands.
+Glass gives Claude Code full shell access in the context of your vault's working directory. This means a note or canvas containing adversarial instructions (prompt injection) could (if read into Claude's context via `read_note`, `get_active_note`, `read_canvas`, or the quick ask commands) attempt to influence Claude's behaviour, including running shell commands.
 
-**What Glass does:** All note content passed to Claude is wrapped in XML-style delimiters with an explicit instruction to treat it as data rather than instructions. This defends against naive and moderately sophisticated injection attempts. It is not a complete solution; a carefully crafted note could attempt to escape the wrapper, but it meaningfully raises the bar.
+**What Glass does:** All note and canvas content passed to Claude is wrapped in XML-style delimiters with an explicit instruction to treat it as data rather than instructions. This defends against naive and moderately sophisticated injection attempts. It is not a complete solution; a carefully crafted note or canvas could attempt to escape the wrapper, but it meaningfully raises the bar.
 
-**What won't protect you:** The **Read-only vault access** setting removes the `create_note` and `update_note` MCP tools, but this is not a meaningful injection defence. A successful injection still has full shell access; it can exfiltrate data via `curl`, write files directly via the filesystem, or run any other shell command. Read-only mode is useful if you want to prevent accidental vault writes during a browsing or query session; it should not be mistaken for a security boundary.
+**What won't protect you:** The **Read-only vault access** setting removes the `create_note`, `update_note`, `create_canvas`, and `update_canvas` MCP tools from Claude's tool list, but that's all it does. It does not sandbox the filesystem, and it is not a meaningful defence against prompt injection or even your own direct requests. Claude Code has full shell and file access in your vault's working directory regardless of this setting, so if an MCP write tool isn't available for a task, it can and will fall back to `Bash`/`Write` and accomplish the same thing directly. This isn't hypothetical: asking Claude to create a canvas with read-only mode enabled resulted in it writing the file straight to disk once it noticed the tool was missing. A successful injection has that same option, and can also exfiltrate data via `curl` or run any other shell command. Read-only mode only changes what's on the MCP tool list; never treat it as a write-prevention or security boundary.
 
 **Recommended practices:**
 
@@ -226,7 +231,7 @@ npm test            # Run tests once
 npm run test:watch  # Re-run on file changes
 ```
 
-Integration tests cover the vault MCP server: auth, all fifteen tools, read-only mode, port fallback, and HTTP edge cases. Tests spin up a real HTTP server against a mock vault — no Obsidian instance required.
+Integration tests cover the vault MCP server: auth, all eighteen tools, read-only mode, port fallback, and HTTP edge cases. Tests spin up a real HTTP server against a mock vault — no Obsidian instance required.
 
 The PTY terminal, xterm.js rendering, and Obsidian plugin lifecycle are not covered by automated tests; verify those manually in the test vault.
 
