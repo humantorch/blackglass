@@ -20,7 +20,8 @@ Every slash command, every MCP tool, every session you'd have in a standalone te
 <!-- WHATS-NEW-START -->
 ## What's new in 1.15.0
 
-- **Canvas MCP tools** — Blackglass can now read from and write to Obsidian Canvas files through MCP tool calls.
+- **Canvas MCP tools** — Claude can now create, read, and update Obsidian Canvas files: spatial boards of cards connected by arrows, not just linear notes. Ask it to turn a note into a mind map, lay out a project as a kanban board, or read back an existing canvas to reason about its structure.
+- **Read-only mode covers canvases too** — the Read-only vault access setting now also hides `create_canvas` and `update_canvas`, matching how it already handles notes.
 <!-- WHATS-NEW-END -->
 
 ## Features
